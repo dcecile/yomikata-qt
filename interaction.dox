@@ -1,0 +1,27 @@
+/**
+
+@page interactiondesign Interaction Design
+
+A comic book reader needs to focus on the needs of the user. When the user is reading comics, what do they want?
+
+- Compatibilty: works with regular ZIP and RAR archive files
+- Display: display two pages at a time, scaled correctly
+- Simplicity: few controls and options
+- Responsive: the user does not have to wait (especially not without feedback)
+- Bookmarks: keep track of the books the user is currently reading
+- Small text: compensate for the poor DPI of monitors by enlarging images
+- Reliable: predictable and comfortable
+
+With the most basic comic book reader, a user would:
+- open an archive
+- wait while the archive loads
+- see the first pages and page numbers
+- be able to turn the pages forward and backward
+- be able to readjust the positioning by shifting which pages are paired
+- see two pages will scale to fit the window exactly
+- see with wide pages, only one is displayed and it fits the window exactly
+- be able to switch to fullscreen mode to get a full immersion
+- see when the window changes sizes, the pages reload and return to fit the screen
+- not wait when turning pages, reading regularly
+
+*/

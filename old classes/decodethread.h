@@ -2,39 +2,45 @@
 #define DECODETHREAD_H
 
 #include <QThread>
-#include <QSize>
+#include <QMutex>
+#include <QWaitCondition>
+#include <QImage>
 
-class PageCache;
+class Page;
 
+/**
+ * @ingroup mod_decoder
+ */
 class DecodeThread : public QThread
 {
     Q_OBJECT
 
+protected:
+    DecodeThread(QObject *parent);
+
 public:
-    DecodeThread(PageCache *pageCache);
+    void startDecoding(Page *page);
+
     virtual ~DecodeThread();
 
-    void abortDecode();
-
-    void stop();
-
 signals:
-    void pageReadFailed(int pageNum);
+    void doneDecodeJob(DecodeThread *thread, Page *page, QImage image, QImage thumbnail);
 
 protected:
-    virtual void decode(int pageNum, const QString &path, QSize fullSize, const QSize &boundingSize) = 0;
-
-    PageCache *pageCache();
-
-    bool decodeAborted() const;
+    virtual void decode() = 0;
+    void finished(QImage image, QImage thumbnail);
 
 private:
     void run();
 
 private:
-    PageCache *_pageCache;
-    bool _stopped;
-    bool _decodeAborted;
+    QMutex _mutex;
+    QWaitCondition _waitForDecode;
+    bool _finished;
+    bool _aborted;
+
+protected:
+    Page *_page;
 };
 
 #endif

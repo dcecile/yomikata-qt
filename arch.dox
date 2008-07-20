@@ -1,0 +1,96 @@
+/**
+
+@page archdesign Architectural Design
+
+Architectural goals
+- Understandable
+- Support change
+- Reliable
+
+@section stewardarch Steward
+Handles all outside requests. Opens the Book, and preforms page turning and viewport readjustments. Coordinates the Artificer's decodes, works the Projector to display pages, and uses the Depot to store decoded pages.
+
+@section bookarch Book
+Knows the layout of the pages. Its pages can be turned.
+
+@section indexarch Index
+Knows information about the files that constitute the Book. Filenames and file sizes.
+
+@section strategistarch Strategist
+References the Book and uses personal information about image dimensions and viewport size to determine the position and size that pages should be displayed at. Keeps the Book accurate by updating information about wide pages.
+
+@section depotarch Depot
+Stores the most useful pages for later use. Page priority is gleaned from the Book and the Strategist.
+
+@section artificerarch Artificer
+Decodes images from files, as specified in the Index. Colludes with the Strategist to get the right measurements.
+
+@section projectorarch Projector
+Used solely by the Steward to show images or loading messages.
+
+
+@section archproblems Nasty architectural problems:
+- Multiple decode threads
+- Decoding QImage to transcode to QPixmap
+- Transfer big image from decode to main thread
+- Cancel decode
+- Update decode parameters
+- Keep full-size images
+- Keep extracted file contents
+- Handle decode errors
+- Alternative scrollers
+- Handle archive errors
+- Pipeline extract-decode
+- Variable image source: archive or filesystem
+- Get image size for decode and scale
+- Run extract-decode-scale offthread
+- Incremental listing processing
+- File sorting by folder heirarchy
+- Multiple archive formats
+- Recognize archive types
+- Recognize image types
+- Image loading wait
+- Archive listing wait
+- Caching
+    - Keep decodes going while cache not full
+    - Discard invalid sizes
+    - Display finished decodes
+    - Cache-size limit
+    - Precache target range
+    - Convert to QImage only during main thread
+    - Caching/rendering greyscale images
+    - Caching/rendering 8-bit colourtable images
+    - Know if page is in decoding processs with correct parameters
+    - Cache priorities
+    - Know which to precache next, contiguous section around current page
+- Scaled size prediction
+    - Change with window resize
+    - Change with page order change
+- Page layout (wide or double)
+    - Change with image dimensions
+    - Cahnge with user input
+- Precaching during window resize
+- Precaching during zooming
+- Precaching during stable zoom
+- Start not at first page
+- Filesystem open and directory listing wait vs. display opened file
+- Turn pages
+    - Display decoded pages
+    - Request decodes
+    - Realign cache
+    - Update actions enabled/disabled
+- Idle mouse
+- Display one or two pages or loading messages
+- Threading
+    - Display vs. precache
+    - Update decode parameters
+    - Wait to know page sizes
+    - Predict page sizes by filesize
+    - Scaling thread
+    - Thread priorities, cancelling
+- Display using QGraphicsView or plain QWidget (OpenGL support?)
+- Historic data (response time, cache misses, extract/decode/scale times)
+- Connect user input events
+- Predict loading time to give good loading progress bar
+
+*/

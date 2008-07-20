@@ -2,24 +2,30 @@
 #define EXTRACTDECODETHREAD_H
 
 #include "decodethread.h"
-#include "fileinfo.h"
 
+#include <QStringList>
+
+#include "planner.h"
+#include "fileclassifier.h"
+
+/**
+ * @ingroup mod_decoder
+ */
 class ExtractDecodeThread : public DecodeThread
 {
     Q_OBJECT
 
 public:
-    ExtractDecodeThread(PageCache *pageCache);
+    ExtractDecodeThread(FileClassifier::ArchiveType archiveType, const QString &archive, QObject *parent);
+
     ~ExtractDecodeThread();
 
-    void setArchive(FileInfo::ArchiveType archiveType, const QString &archive);
+private:
+    void decode();
 
 private:
-    void decode(int pageNum, const QString &path, QSize fullSize, const QSize &boundingSize);
-
-private:
-    FileInfo::ArchiveType _archiveType;
-    QString _archive;
+    QString _command;
+    QStringList _args;
 };
 
 #endif

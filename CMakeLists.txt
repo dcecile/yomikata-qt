@@ -1,51 +1,39 @@
-project( yomikata )
-find_package( KDE4 REQUIRED )
-include_directories( ${KDE4_INCLUDES} )
-include( KDE4Defaults )
+project(yomikata)
 
-set( CMAKE_CXX_FLAGS "-Werror ${CMAKE_CXX_FLAGS}" )
+# KDE4 dependency
+find_package(KDE4 REQUIRED)
+include_directories(${KDE4_INCLUDES})
+include(KDE4Defaults)
 
-set( yomikata_SRCS
+# Build options
+set(CMAKE_CXX_FLAGS "-Werror ${CMAKE_CXX_FLAGS}")
+
+# Source files
+set(yomikata_SRCS
     main.cpp
-    yomikata.cpp
-
-    oyabun.cpp
-
-    source.cpp
-    fileclassifier.cpp
-
-    filelist.cpp
-    lister.cpp
-    archivelister.cpp
-
-    book.cpp
-    pageconductor.cpp
-    planner.cpp
-    cache.cpp
-    cacheentry.cpp
-    cachemanager.cpp
-    page.cpp
-
-    decoder.cpp
-    decodethread.cpp
-    extractdecodethread.cpp
-
-    depicter.cpp
-    lens.cpp
 )
 
-kde4_add_kcfg_files( yomikata_SRCS settings.kcfgc )
+# Build steps
+kde4_add_kcfg_files(yomikata_SRCS settings.kcfgc)
+kde4_add_executable(yomikata ${yomikata_SRCS})
+target_link_libraries(yomikata ${KDE4_KDEUI_LIBS})
 
-kde4_add_executable( yomikata ${yomikata_SRCS} )
+# Unit testing
+add_subdirectory(test)
 
-target_link_libraries( yomikata ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS} ${KDE4_THREADWEAVER_LIBRARY}) #${QT_QTOPENGL_LIBRARY})
+# Doxygen
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    message(STATUS "Doxygen found, 'doc' target enabled")
+    configure_file(Doxyfile.config.doxy ${CMAKE_BINARY_DIR}/Doxyfile)
+    add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/Doxyfile DEPENDS ${CMAKE_BINARY_DIR}/Doxyfile COMMENT "Building doc")
+else(DOXYGEN_FOUND)
+    message(STATUS "Doxygen found, 'doc' target disabled")
+endif(DOXYGEN_FOUND)
 
-install( TARGETS yomikata DESTINATION ${BIN_INSTALL_DIR} )
-
-
-########### install files ###############
-
-install( FILES yomikata.desktop  DESTINATION  ${XDG_APPS_INSTALL_DIR} )
-install( FILES yomikata.kcfg  DESTINATION  ${KCFG_INSTALL_DIR} )
-install( FILES yomikataui.rc DESTINATION  ${DATA_INSTALL_DIR}/yomikata )
-kde4_install_icons( ${ICON_INSTALL_DIR} )
+# Install files
+install(TARGETS yomikata DESTINATION ${BIN_INSTALL_DIR})
+install(FILES yomikata.desktop  DESTINATION  ${XDG_APPS_INSTALL_DIR})
+install(FILES yomikata.kcfg  DESTINATION  ${KCFG_INSTALL_DIR})
+install(FILES yomikataui.rc DESTINATION  ${DATA_INSTALL_DIR}/yomikata)
+kde4_install_icons(${ICON_INSTALL_DIR})

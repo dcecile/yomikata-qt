@@ -1,0 +1,28 @@
+/*!
+
+@mainpage Yomikata: A liberated and enjoyable comics reading experience.
+
+The goal of Yomikata is to let users simply read comics. They click on the archive to open it and the book will be openend, displaying the first pages. They can navigate pages quickly and can use bookmarks to go to the places they left off reading. The interaction is snappy so the user can glance at a book to see if it's the right one, and if it is, they don't have to wait to start reading. In short, the program does not interfere with regular reading habits.
+
+@section docorg Documentation map
+This documentation is organizad as follows:
+
+- @ref gettingstarted tells you how to what you need to start finding your way around.
+- @ref interactiondesign describes the interaction goals in detail and provides stories of how the program is used.
+- @ref archdesign discusses the internal architecture of the program.
+- @ref roadmap lays out the current direction for development.
+- @ref todo lists outstanding development tasks.
+
+@page gettingstarted Getting Started
+
+To get started developing Yomikata, the following items are needed:
+- KDE4 development environment including cmake
+
+Developer resources include:
+- <a href="http://techbase.kde.org">KDE development information</a>
+- <a href="http://doc.trolltech.com/mainclasses.html">QT reference</a> (<a href="/usr/share/doc/qt4-doc/html/mainclasses.html">local</a>)
+- <a href="http://api.kde.org/4.x-api/kdelibs-apidocs/">KDE API reference</a>
+- <a href="http://cmake.org/HTML/cmake-2.6.html">CMake reference</a> (<a href="/usr/share/doc/cmake/cmake.html">local</a>)
+- <a href="http://www.stack.nl/~dimitri/doxygen/manual.html">Doxygen manual</a> (<a href="/usr/share/doc/doxygen/html/index.html">local</a>)
+
+*/

@@ -1,0 +1,124 @@
+/**
+
+@page roadmap Roadmap
+
+Compatibility: archive listing and extraction
+- list an archive
+- read files from the archive
+
+Display: page ordering, scaling
+- display two pages with correct sizes and positioning
+- adjust page layouts to handle wide pages
+
+Simplicity: understanding of required input mechanisms
+- page forward and backward
+- page shift
+- full screen
+
+Responsiveness: precaching, stride, postcaching, prescaling, fast display
+- display loading information
+- decode on separate thread
+- precache when not busy
+- cache management
+- wait to learn image sizes
+- readjust gracefully when window size changes
+- readjust gracefully when page layout changes
+
+Bookmarks: persistent user data, initial bookmark view
+
+Small text: "trackball" zoom mode, magnifier
+
+Reliable: bug-free and supports desktop ideosyncracies
+
+@section oldroadmap Old roadmap
+
+Compatibility: archive listing and extraction
+- Done: Read files in a directory
+- Done: Read archives
+- Done: Open other archive formats
+
+Display: page ordering, scaling
+- Done: Status of page # / total
+- Done: Fullscreen mode
+- Done: Display two pages
+- Done: Hide mouse after idle time
+- Done: Maybe switch to loading cursor when loading
+- TODO: Correctly calculate double-page size for portait window
+- TODO: Show plain text info files (options for text encoding?)
+- TODO: Detect when unzip is using filenames from Shift-JIS
+- TODO: Fullscreen mode w/o menubar
+- _maybe_: Give a good colour to the spacer panels
+- _maybe_: Useful opening frame if nothing loaded
+
+Simplicity: understanding of required input mechanisms
+- Done: Keyboard shortcuts for changing pages
+- Done: Open with commandline-parameters
+- TODO: All navigation shortcuts
+- TODO: Viewing modes (single, left-right, right-left)
+- TODO: Configuration dialog, save settings
+- TODO: Choose which way single page goes (leftward/rightward) in config
+- TODO: Allow keyboard zoom scrolling; CTRL+arrows
+- TODO: Allow rotated output
+- TODO: Drag middle mouse button up and down to zoom in and out
+- TODO: Option to use scrollbars and mouse drag to scroll
+- _maybe_: Option to convert an archive
+- _maybe_: Maybe tool for rearchiving
+
+Responsiveness: precaching, stride, postcaching, prescaling, fast display
+- Done: Optimized window resizing
+- Done: Preempt the other queued jobs with the current page using QueuePolicy
+- Done: Make custom decoder thread
+- Done: Memory use awareness
+- Done: Cull the queue when there's way too many entries
+- TODO: During resizing, pull out of zoom mode if the size doesn't change for a while
+- _maybe_: Draw pixmaps on QGLWidget
+- _maybe_: B&W memory reduction
+- TODO: When stopping zoom, stop irrelevant decode jobs
+- TODO: When resizing, pause decoding
+- TODO: Fix slow-down when first starting zoom mode
+- TODO: Detect stride when user is flipping through pages
+- _maybe_: Thumbnails
+- _mabye_: Decode a full-res version of the current page when the queue is empty
+- _maybe_: Optimize archive retrival (stdout)
+- _maybe_: Optimize archive retrival (pipeline)
+- _maybe_: Use zlib
+
+Bookmarks: persistent user data, initial bookmark view
+- TODO: Bookmarks, maybe autoopen at previous position
+
+Small text: "trackball" zoom mode, magnifier
+- Done: Zoom tool (free roaming)
+- Done: Give inertia to the pages in zoom mode
+- Done: Use mouse wheel to zoom
+- TODO: Give zoom option to show at full resolution
+
+Reliable: bug-free and supports desktop ideosyncracies
+- Comprehensible architecture
+- Unit tests
+- MIME types
+- Archive errors
+- ZLIB/KIO archive handling
+- Performance measurements
+- Unzip charset and special character issues
+- Listing charset issues (alleviate by using raw data?)
+- KApplication::kApplication()->syncX() for slow drawing
+- Done: Kill decoding when app exits
+- Done: Open more than once
+- Done: When mouse leaves display widget, turn mouse back on (for modal dialogs)
+- Done: Unhide mouse when new dialog is popped up
+- TODO: Handle erroraneous input (bad files) (bad setup)
+- TODO: Check for non-local archives
+- _maybe_: Copy non-local file when given url
+- _maybe_: Use mimetype filters for file open dialog
+- _maybe_: Use kioslaves
+- TODO: Unobtrusive error messages
+- TODO: Session management awareness
+- TODO: Let archive get dropped to open
+- _maybe_: Drop pages onto a folder, etc. to save them
+- _maybe_: Status bar for buffer fullness
+- _maybe_: Recursive openning
+- _maybe_: Open current folder
+- _maybe_: Open archive with archiver
+- _maybe_: Detect password-protected archives
+
+*/
