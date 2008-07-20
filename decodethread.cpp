@@ -1,67 +1,68 @@
+#include "decodethread.h"
+
+#include <QMutexLocker>
 #include <KDebug>
 
-#include "decodethread.h"
-#include "pagecache.h"
+#include "page.h"
 
-DecodeThread::DecodeThread(PageCache *pageCache)
-    :_pageCache(pageCache), _stopped(false)
+DecodeThread::DecodeThread(QObject *parent)
+    : QThread(parent), _finished(true), _aborted(false)
 {
 }
 
 DecodeThread::~DecodeThread()
 {
-    // The thread had better be stopped by the time we reach here
-}
-
-void DecodeThread::stop()
-{
-    // Tell the thread of execution to stop
-    _stopped = true;
-    _decodeAborted = true;
-}
-
-void DecodeThread::abortDecode()
-{
-    _decodeAborted = true;
-}
-
-bool DecodeThread::decodeAborted() const
-{
-    return _decodeAborted;
-}
-
-PageCache *DecodeThread::pageCache()
-{
-    return _pageCache;
+    // Abort; make sure the thread stops running
+    _aborted = true;
+    _waitForDecode.wakeOne();
+    wait();
 }
 
 void DecodeThread::run()
 {
-    int nextPage;
-    QString path;
-    QSize fullSize;
-    QSize boundingSize;
+    QMutexLocker locker(&_mutex);
 
-    kDebug()<<"Decode thread started"<<endl;
+    kDebug()<<"Started";
 
-    _stopped = false;
+    // Wait for the first decode
+    _waitForDecode.wait(&_mutex);
 
-    // Continue until stopped
-    while (!_stopped) {
-        _decodeAborted = false;
+    // Stop if aborted
+    while (!_aborted) {
 
-        // Get the next page to start decoding
-        // This call will block if no pages need decoding
-        _pageCache->scheduleNextDecode(this, &nextPage, &path, &fullSize, &boundingSize);
+        // Decode
+        _finished = false;
+        decode();
 
-        // Check again that we haven't stopped
-        if (_stopped) {
-            break;
-        }
-
-        // Start decoding the page
-        decode(nextPage, path, fullSize, boundingSize);
+        // Wait for the next decode
+        _waitForDecode.wait(&_mutex);
     }
+
+    kDebug()<<"Aborted";
+}
+
+void DecodeThread::startDecoding(Page *page)
+{
+    // Assert the decode is finished so that it will be or will soon start waiting
+    Q_ASSERT(_finished);
+
+    // Make sure the thread is waiting
+    _mutex.lock();
+
+    // Set the parameters
+    _page = page;
+
+    // Trigger the decode
+    _waitForDecode.wakeOne();
+
+    // Unlock the thread
+    _mutex.unlock();
+}
+
+void DecodeThread::finished(QImage image, QImage thumbnail)
+{
+    _finished = true;
+    emit doneDecodeJob(this, _page, image, thumbnail);
 }
 
 #include "decodethread.moc"

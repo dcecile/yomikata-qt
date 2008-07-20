@@ -10,12 +10,19 @@
 #include <KSelectAction>
 #include <QBasicTimer>
 
-#include "pagecache.h"
-#include "filelister.h"
-#include "extractlister.h"
-#include "filedecodethread.h"
-#include "extractdecodethread.h"
-#include "pagedisplay.h"
+#include "oyabun.h"
+
+/**
+ * @defgroup mod_userinterface User Interface module
+ * This module handles input from the user.
+ */
+
+/**
+ * @ingroup mod_userinterface
+ * @brief The program's main window
+ *
+ * Yomikata manages all QAction objects and passes input to Oyabun and Presenter.
+ */
 
 class Yomikata : public KXmlGuiWindow
 {
@@ -29,8 +36,6 @@ private slots:
     void open();
     void toggleFullScreen(bool checked);
     void toggleMenubar(bool checked);
-
-    void pageReadFailed(int pageNum);
 
     void enableForward(bool enabled);
     void enableBackward(bool enabled);
@@ -57,13 +62,8 @@ private:
     // Current state
     enum PageMode {SingleMode=0, ComicsMode, MangaMode};
 
-    // Loaded modules
-    PageCache _pageCache;
-    FileLister _fileLister;
-    ExtractLister _extractLister;
-    FileDecodeThread _fileDecodeThread;
-    ExtractDecodeThread _extractDecodeThread;
-    PageDisplay _pageDisplay;
+    // Oyabun
+    Oyabun _oyabun;
 
     // Actions
     QAction *_pageForwardAction;
@@ -81,11 +81,6 @@ private:
     KAction *_singlePageAction;
     KAction *_comicsViewAction;
     KAction *_mangaViewAction;
-
-    // Loading stuff
-    bool _archiveMode;
-    QString _archivePath;
-    FileInfo::ArchiveType _archiveType;
 };
 
 #endif

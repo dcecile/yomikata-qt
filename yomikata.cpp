@@ -1,3 +1,6 @@
+
+#include "yomikata.h"
+
 #include <KApplication>
 #include <KLocale>
 #include <KActionCollection>
@@ -16,21 +19,17 @@
 #include <QDir>
 #include <KStatusBar>
 
-#include "yomikata.h"
-#include "fileinfo.h"
-#include "testwidget.h"
 #include "settings.h"
+#include "fileclassifier.h"
 
 Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
-    :KXmlGuiWindow(parent), _pageCache((PageMode)Settings::viewMode() != SingleMode), _fileDecodeThread(&_pageCache), _extractDecodeThread(&_pageCache), _pageDisplay((PageMode)Settings::viewMode() == MangaMode)
+    :KXmlGuiWindow(parent), _oyabun(this)
 {
     PageMode pageMode = (PageMode)Settings::viewMode();
     Q_ASSERT(pageMode == SingleMode || pageMode == ComicsMode || pageMode == MangaMode);
 
     // Create the widget for displaying the pages
-    setCentralWidget(&_pageDisplay);
-
-    //setCentralWidget(new TestWidget);
+    setCentralWidget(_oyabun.getDepicter());
 
     // Set up the actions (open, quit, etc.)
     createActions();
@@ -40,7 +39,7 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
 
     // Load default toolbars, shortcuts
     setupGUI();
-    //menuBar()->show();
+    menuBar()->show();
 
     // Take off the status bar
     setStatusBar(0);
@@ -52,42 +51,25 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
     enableZoomIn(false);
     enableZoomOut(false);
 
-    // Connect to page decode failure
-    //connect(&_pageCache, SIGNAL(pageReadFailed(int)), this, SLOT(pageReadFailed(int)));
-
     // Connect to forward/backward status
-    connect(&_pageCache, SIGNAL(forwardEnabled(bool)), this, SLOT(enableForward(bool)));
-    connect(&_pageCache, SIGNAL(backwardEnabled(bool)), this, SLOT(enableBackward(bool)));
+    connect(&_oyabun, SIGNAL(forwardEnabled(bool)), this, SLOT(enableForward(bool)));
+    connect(&_oyabun, SIGNAL(backwardEnabled(bool)), this, SLOT(enableBackward(bool)));
 
-    // Connect to display signals
-    connect(&_pageCache, SIGNAL(showOnePage(const QPixmap &, int, int)), &_pageDisplay, SLOT(setOnePage(const QPixmap &, int, int)));
-    connect(&_pageCache, SIGNAL(showTwoPages(const QPixmap &, const QPixmap &, int, int, int)), &_pageDisplay, SLOT(setTwoPages(const QPixmap &, const QPixmap &, int, int, int)));
-    connect(&_pageCache, SIGNAL(showPageNumber(int, int, int)), &_pageDisplay, SLOT(setPageNumber(int, int, int)));
-
-    // Connect display size changes
-    connect(&_pageDisplay, SIGNAL(displaySizeChanged(const QSize &)), &_pageCache, SLOT(setDisplaySize(const QSize &)));
-
+    /*
     // Connect to zoom status
     connect(&_pageDisplay, SIGNAL(zoomToggleEnabled(bool)), this, SLOT(enableZoomToggle(bool)));
     connect(&_pageDisplay, SIGNAL(zoomInEnabled(bool)), this, SLOT(enableZoomIn(bool)));
     connect(&_pageDisplay, SIGNAL(zoomOutEnabled(bool)), this, SLOT(enableZoomOut(bool)));
-
-    // Connect to the listers
-    connect(&_fileLister, SIGNAL(listBuilt(QStringList, QString)),
-             &_pageCache, SLOT(initialize(QStringList, QString)));
-    connect(&_extractLister, SIGNAL(listBuilt(QStringList, QString)),
-             &_pageCache, SLOT(initialize(QStringList, QString)));
-
-    _pageCache.setDisplaySize(_pageDisplay.size());
+    */
 
     if (!initialArg.isEmpty()) {
         // Open the file right away
         if (QDir::isRelativePath(initialArg)) {
-            startListing(QDir::current().absoluteFilePath(initialArg));
+            _oyabun.start(QDir::current().absoluteFilePath(initialArg));
         } else {
-            startListing(initialArg);
+            _oyabun.start(initialArg);
         }
-        kDebug()<<"Page loader initialized"<<endl;
+        kDebug()<<"Page loader initialized";
 
         // Reflect the open file's name in the title bar
         setCaption(initialArg);
@@ -96,16 +78,6 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
 
 Yomikata::~Yomikata()
 {
-    // Stop the threads
-    _extractDecodeThread.stop();
-    _fileDecodeThread.stop();
-
-    // Stop scheduling
-    _pageCache.reset();
-
-    // Wait for the threads
-    _extractDecodeThread.wait();
-    _fileDecodeThread.wait();
 }
 
 void Yomikata::open()
@@ -113,7 +85,7 @@ void Yomikata::open()
     // Get an existing file from the user
     QString filename = KFileDialog::getOpenFileName(
         KUrl(),
-        FileInfo::getFileDialogWildcardString(),
+        FileClassifier::getFileDialogWildcardString(),
         this,
         QString());
 
@@ -122,64 +94,10 @@ void Yomikata::open()
         return;
     }
 
-    startListing(filename);
+    _oyabun.start(filename);
 
     // Reflect the open file's name in the title bar
     setCaption(filename);
-
-    // Show the waiting cursor
-    _pageDisplay.loadingStarted();
-}
-
-void Yomikata::startListing(const QString &initialFile)
-{
-    KUrl path = KUrl::fromPath(initialFile);
-
-    // Check if we're opening plain files or an archive
-    if (FileInfo::isImageFile(initialFile)) {
-        _archiveMode = false;
-
-        // Start the directory listing
-        _fileLister.list(initialFile);
-
-    } else if (FileInfo::isArchiveFile(initialFile)) {
-        _archiveMode = true;
-        _archivePath = initialFile;
-        _archiveType = FileInfo::getArchiveType(_archivePath);
-
-        // Start the archive listing
-        _extractLister.list(_archiveType, _archivePath);
-    } else {
-        Q_ASSERT(false);
-    }
-
-    kDebug()<<"Listing started"<<endl;
-
-    // Stop the threads
-    _extractDecodeThread.stop();
-    _fileDecodeThread.stop();
-
-    // Stop scheduling
-    _pageCache.reset();
-
-    // Wait for the threads
-    _extractDecodeThread.wait();
-    _fileDecodeThread.wait();
-
-    // Start the decode threads
-    if (_archiveMode) {
-        _extractDecodeThread.setArchive(_archiveType, _archivePath);
-        _extractDecodeThread.start();
-    } else {
-        _fileDecodeThread.start();
-    }
-}
-
-void Yomikata::pageReadFailed(int pageNum)
-{
-    kDebug()<<"Page "<<pageNum<<" failed reading"<<endl;
-
-    KMessageBox::error(this, i18n("Cannot load the image."));
 }
 
 void Yomikata::wheelEvent(QWheelEvent *event)
@@ -192,11 +110,9 @@ void Yomikata::wheelEvent(QWheelEvent *event)
     if (zoom) {
         if (event->delta() > 0 && _zoomInAction->isEnabled()) {
             // Zoom in
-            _pageDisplay.zoomIn();
 
         } else if (event->delta() < 0 && _zoomOutAction->isEnabled()) {
             // Zoom out
-            _pageDisplay.zoomOut();
 
         } else {
             // Can't zoom
@@ -206,11 +122,11 @@ void Yomikata::wheelEvent(QWheelEvent *event)
     } else {
         if (event->delta() > 0 && _pageBackwardAction->isEnabled()) {
             // Page back
-            _pageCache.navigateBackward();
+            _oyabun.turnPageBackward();
 
         } else if (event->delta() < 0 && _pageForwardAction->isEnabled()) {
             // Page forward
-            _pageCache.navigateForward();
+            _oyabun.turnPageForward();
 
         } else {
             // Can't page
@@ -223,11 +139,10 @@ void Yomikata::mousePressEvent(QMouseEvent *event)
 {
     // Middle mouse triggers paging forward one page
     if (event->button() == Qt::MidButton && _pageForwardAction->isEnabled()) {
-        _pageCache.navigateForwardOnePage();
+        _oyabun.turnPageForwardOnePage();
     }
 
     if (event->button() == Qt::RightButton && _zoomToggleAction->isEnabled()) {
-        _pageDisplay.toggleZoom();
     }
 }
 
@@ -275,7 +190,7 @@ void Yomikata::enableZoomOut(bool enabled)
 
 void Yomikata::toggleFullScreen(bool checked)
 {
-    kDebug()<<"Fullcreen toggled "<<checked<<endl;
+    kDebug()<<"Fullcreen toggled"<<checked;
     if (checked) {
         showFullScreen();
         // Give warning about switching to fullscreen and losing the menubar
@@ -299,7 +214,7 @@ void Yomikata::toggleMenubar(bool checked)
 void Yomikata::createActions()
 {
     // Quit
-    KStandardAction::quit(kapp, SLOT(quit()), actionCollection());
+    KStandardAction::quit(this, SLOT(close()), actionCollection());
 
     // Open file
     KStandardAction::open(this, SLOT(open()), actionCollection());
@@ -314,14 +229,14 @@ void Yomikata::createActions()
     // Page forward
     _pageForwardAction = actionCollection()->addAction( "page_forward" );
     _pageForwardAction->setText(i18n("Page &Forward"));
-    connect(_pageForwardAction, SIGNAL(triggered(bool)), &_pageCache, SLOT(navigateForward()));
+    connect(_pageForwardAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageForward()));
     _pageForwardAction->setShortcuts(QList<QKeySequence>()<<Qt::Key_Space<<Qt::Key_PageDown);
     addAction(_pageForwardAction);
 
     // Page backward
     _pageBackwardAction = actionCollection()->addAction( "page_backward" );
     _pageBackwardAction->setText(i18n("Page Backward"));
-    connect(_pageBackwardAction, SIGNAL(triggered(bool)), &_pageCache, SLOT(navigateBackward()));
+    connect(_pageBackwardAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageBackward()));
     _pageBackwardAction->setShortcuts(QList<QKeySequence>()<<Qt::Key_Backspace<<Qt::Key_PageUp);
     addAction(_pageBackwardAction);
 
@@ -329,50 +244,44 @@ void Yomikata::createActions()
     _pageLeftAction = new KAction(KIcon("go-previous"),  i18n("Page &Left"), this);
     _pageLeftAction->setShortcut(Qt::Key_Left);
     _pageLeftAction->setObjectName("page_left");
-    connect(_pageLeftAction, SIGNAL(triggered(bool)), &_pageCache, SLOT(navigateForward()));
+    connect(_pageLeftAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageForward()));
     actionCollection()->addAction(_pageLeftAction->objectName(), _pageLeftAction);
 
     // Page right
     _pageRightAction = new KAction(KIcon("go-next"),  i18n("Page &Right"), this);
     _pageRightAction->setShortcut(Qt::Key_Right);
     _pageRightAction->setObjectName("page_right");
-    connect(_pageRightAction, SIGNAL(triggered(bool)), &_pageCache, SLOT(navigateBackward()));
+    connect(_pageRightAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageBackward()));
     actionCollection()->addAction(_pageRightAction->objectName(), _pageRightAction);
 
     // Page to start
     _pageToStartAction = new KAction(KIcon("go-top"),  i18n("Go to &Start"), this);
     _pageToStartAction->setShortcut(Qt::Key_Home);
     _pageToStartAction->setObjectName("page_to_start");
-    connect(_pageToStartAction, SIGNAL(triggered(bool)), &_pageCache, SLOT(navigateToStart()));
+    connect(_pageToStartAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageToStart()));
     actionCollection()->addAction(_pageToStartAction->objectName(), _pageToStartAction);
 
     // Page to end
     _pageToEndAction = new KAction(KIcon("go-bottom"),  i18n("Go to &End"), this);
     _pageToEndAction->setShortcut(Qt::Key_End);
     _pageToEndAction->setObjectName("page_to_end");
-    connect(_pageToEndAction, SIGNAL(triggered(bool)), &_pageCache, SLOT(navigateToEnd()));
+    connect(_pageToEndAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageToEnd()));
     actionCollection()->addAction(_pageToEndAction->objectName(), _pageToEndAction);
 
     // Toggle zoom
     _zoomToggleAction = new KAction(KIcon("zoom-best-fit"),  i18n("&Toggle Zoom"), this);
     _zoomToggleAction->setShortcut(Qt::Key_Z);
     _zoomToggleAction->setObjectName("zoom_toggle");
-    connect(_zoomToggleAction, SIGNAL(triggered(bool)), &_pageDisplay, SLOT(toggleZoom()));
-    actionCollection()->addAction(_zoomToggleAction->objectName(), _zoomToggleAction);
 
     // Zoom in
     _zoomInAction = new KAction(KIcon("zoom-in"),  i18n("Zoom &In"), this);
     _zoomInAction->setShortcut(Qt::Key_C);
     _zoomInAction->setObjectName("zoom_in");
-    connect(_zoomInAction, SIGNAL(triggered(bool)), &_pageDisplay, SLOT(zoomIn()));
-    actionCollection()->addAction(_zoomInAction->objectName(), _zoomInAction);
 
     // Zoom out
     _zoomOutAction = new KAction(KIcon("zoom-out"),  i18n("Zoom &Out"), this);
     _zoomOutAction->setShortcut(Qt::Key_X);
     _zoomOutAction->setObjectName("zoom_out");
-    connect(_zoomOutAction, SIGNAL(triggered(bool)), &_pageDisplay, SLOT(zoomOut()));
-    actionCollection()->addAction(_zoomOutAction->objectName(), _zoomOutAction);
 
     // View mode
     _viewSelectAction = new KSelectAction(i18n("View &Mode"), this);

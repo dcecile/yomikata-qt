@@ -1,71 +1,67 @@
-#include <KDebug>
-#include <QTime>
-#include <QImageReader>
-#include <QProcess>
-#include <QImage>
-
 #include "extractdecodethread.h"
-#include "pagecache.h"
 
-ExtractDecodeThread::ExtractDecodeThread(PageCache *pageCache)
-    :DecodeThread(pageCache)
+#include <QTime>
+#include <QProcess>
+#include <QImageReader>
+#include <KDebug>
+
+#include "page.h"
+
+ExtractDecodeThread::ExtractDecodeThread(FileClassifier::ArchiveType archiveType, const QString &archive, QObject *parent)
+ : DecodeThread(parent)
+{
+    // Choose the right tool and options
+    switch (archiveType) {
+        case FileClassifier::Tar:
+            _command = "tar";
+            _args<<"-xOf";
+            break;
+        case FileClassifier::TarGz:
+            _command = "tar";
+            _args<<"-zxOf";
+            break;
+        case FileClassifier::TarBz:
+            _command = "tar";
+            _args<<"--bzip2"<<"-xOf";
+            break;
+        case FileClassifier::TarZ:
+            _command = "tar";
+            _args<<"-ZxOf";
+            break;
+        case FileClassifier::Zip:
+            _command = "unzip";
+            _args<<"-p";
+            break;
+        case FileClassifier::Rar:
+            _command = "unrar";
+            _args<<"p"<<"-ierr";
+            // Note: With "-ierr", the header info is put into stderr (and ignored here)
+            break;
+        default:
+            Q_ASSERT(false);
+    }
+    // Pass in the file name
+    _args<<archive;
+
+    kDebug()<<_command<<_args;
+}
+
+
+ExtractDecodeThread::~ExtractDecodeThread()
 {
 }
-ExtractDecodeThread:: ~ExtractDecodeThread()
-{
-}
 
-void ExtractDecodeThread::setArchive(FileInfo::ArchiveType archiveType, const QString &archive)
-{
-    kDebug()<<"Setting archive "<<archive<<" (type="<<archiveType<<")"<<endl;
-    _archiveType = archiveType;
-    _archive = archive;
-}
-
-void ExtractDecodeThread::decode(int pageNum, const QString &path, QSize fullSize, const QSize &boundingSize)
+void ExtractDecodeThread::decode()
 {
     QTime time;
 
     QProcess extracter;
 
-    //kDebug()<<"Extracting and decoding "<<path()<<endl;
+    //kDebug()<<"start"<<_page->getPageNumber();
     time.start();
 
-    QString command;
-    QStringList args;
-
-    switch (_archiveType) {
-    case FileInfo::Tar:
-        command = "tar";
-        args<<"-xOf";
-        break;
-    case FileInfo::TarGz:
-        command = "tar";
-        args<<"-zxOf";
-        break;
-    case FileInfo::TarBz:
-        command = "tar";
-        args<<"--bzip2"<<"-xOf";
-        break;
-    case FileInfo::TarZ:
-        command = "tar";
-        args<<"-ZxOf";
-        break;
-    case FileInfo::Zip:
-        command = "unzip";
-        args<<"-p";
-        break;
-    case FileInfo::Rar:
-        command = "unrar";
-        args<<"p"<<"-ierr";
-        // Note: With "-ierr", the header info is put into stderr (and ignored here)
-        break;
-    default:
-        Q_ASSERT(false);
-    }
-    args<<_archive<<path;
-
-    extracter.start(command, args);
+    // Start the extracter
+    extracter.start(_command, _args + QStringList(_page->getFilename()));
 
     // Wait for the extracter to finish
     // Note: QImageReader won't decode the whole image unless the whole
@@ -74,47 +70,54 @@ void ExtractDecodeThread::decode(int pageNum, const QString &path, QSize fullSiz
     Q_ASSERT(waited);
 
     // If aborted, discard the decode
-    if (decodeAborted()) {
-        return;
-    }
 
     // Set up the image reader
     QImageReader imageReader(&extracter);
 
-    // If the full size is known, scale the image as reading it
-    bool prescaled = fullSize.isValid();
-    if (prescaled && boundingSize.isValid()) {
-        QSize imageSize(fullSize);
 
-        // Scale the image down
-        imageSize.scale(boundingSize, Qt::KeepAspectRatio);
-        imageReader.setScaledSize(imageSize);
+    // If the full size is known, calculate the prescaled size
+    bool prescaled = _page->isFullImageSizeKnown();
+
+    if (prescaled) {
+
+        // Notify the page that the decode size is set
+        QSize targetSize = _page->getTargetSize();
+        _page->decodeSizeSet(targetSize);
+
+        // Tell the image reader to output prescaled
+        imageReader.setScaledSize(targetSize);
     }
 
-    // Have the image reader start
+    // Decode the image
     QImage image(imageReader.read());
+    Q_ASSERT(!image.isNull());
 
-    // The image is decoded at the full size because we "can't" tell the size
-    //  before starting decoding
-    fullSize = image.size();
-    Q_ASSERT(fullSize.isValid());
+    if (!prescaled) {
+        // The image was decoded at the full size because we "can't" tell the size
+        //  before starting decoding
 
-    // So scale the decoded image in the worker thread
-    if (!prescaled && boundingSize.isValid()) {
-        // Scale the image down
-        // Note: Fast transform looks horrible
-        image = image.scaled(boundingSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        // Retrieve the size
+        QSize fullSize = image.size();
+        Q_ASSERT(fullSize.isValid());
+
+        // Save the size
+        _page->setFullImageSize(fullSize);
+
+        // Notify the page that the decode size is set
+        QSize targetSize = _page->getTargetSize();
+        _page->decodeSizeSet(targetSize);
+
+        // Resize the image now
+        image = image.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
 
-    //kDebug()<<"Extracting and decoding finished: "<<time.elapsed()<<" ms"<<endl;
+    // Create the thumbnail
+    QImage thumbnail = image.scaled(Page::THUMBNAIL_SIZE, Qt::KeepAspectRatio);
 
-    // If aborted, discard the decode
-    if (decodeAborted()) {
-        return;
-    }
+    //kDebug()<<"done"<<_page->getPageNumber()<<":"<<time.elapsed()<<"ms";
 
-    // Cache the decode
-    pageCache()->setData(pageNum, image, fullSize);
+    // Decode job now finished
+    finished(image, thumbnail);
 }
 
 #include "extractdecodethread.moc"
