@@ -16,7 +16,7 @@ int main (int argc, char *argv[])
 {
     KAboutData aboutData("yomikata",
                          "yomikata", "0.0", I18N_NOOP("A straight-forward app for reading comics and manga."),
-                        KAboutData::License_GPL, "(c) 2006");
+                        KAboutData::License_GPL, "(c) 2007");
     aboutData.addAuthor("Dan Cecile", 0, "dancecile@gmail.com");
 
     KCmdLineArgs::init(argc, argv, &aboutData);
@@ -34,6 +34,8 @@ int main (int argc, char *argv[])
     } else if (args->count() > 1) {
         args->usage(i18n("Only one initial file or directory is supported."));
     }
+
+    app.setWindowIcon(QIcon("/home/geecko/drawing-1.png"));
 
     Yomikata *window = new Yomikata(initialArg);
     window->show();

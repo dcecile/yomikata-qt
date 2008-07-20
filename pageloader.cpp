@@ -14,16 +14,11 @@ PageLoader::PageLoader()
             this, SLOT(decodeDone(Job *)));
 
     // Connect to the listers
-    connect(&_fileLister, SIGNAL(listBuilt(int, const QStringList &)),
-            this, SLOT(listingDone(int, const QStringList &)));
-    connect(&_extractLister, SIGNAL(listBuilt(int, const QStringList &)),
-            this, SLOT(listingDone(int, const QStringList &)));
-
     // Start in a neutral state
     _bufferStart = -1;
     _bufferEnd = -1;
 
-    _zoomMode = false;
+    _resizeMode = false;
 
     _twoPageMode = true;
 
@@ -46,236 +41,6 @@ bool PageLoader::isPageWide(int pageNum)
     }
 }
 
-void PageLoader::changePage()
-{
-    // Change the page to the current target page(s)
-
-    // A page change means that zoom mode is inactive
-    if (_zoomMode) {
-        stopZoomMode();
-    }
-
-    if (_targetPage[1] != -1) {
-        // If one of the pages is wide, only show the primary page
-        if (isPageWide(_targetPage[0]) || isPageWide(_targetPage[1])) {
-            kDebug()<<"Page "<<_targetPage[0]<<" or page "<<_targetPage[1]<<" is wide"<<endl;
-            _targetPage[0] = _targetPage[_primaryPage];
-            _targetPage[1] = -1;
-        }
-    }
-
-    kDebug()<<"Changing page "<<_targetPage[0]<<", "<<_targetPage[1]<<endl;
-
-    bool pageNumberShown = false;
-
-    // If the pages are loaded, show them
-    if (!_twoPageMode || _targetPage[1] == -1) {
-        if (!_pages[_targetPage[0]].pixmap.isNull()) {
-            emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
-            pageNumberShown = true;
-        }
-    } else {
-        if (!_pages[_targetPage[0]].pixmap.isNull() && !_pages[_targetPage[1]].pixmap.isNull()) {
-            emit showTwoPages(_pages[_targetPage[0]].pixmap, _pages[_targetPage[1]].pixmap, _targetPage[0], _targetPage[1], _numPages);
-            pageNumberShown = true;
-        }
-    }
-
-    // If a page isn't loaded or is the wrong size, decode it
-    if (_pages[_targetPage[0]].pixmap.isNull() || !isPageScaled(_targetPage[0])) {
-        startReadingPage(_targetPage[0]);
-    }
-    if (_targetPage[1] != -1 && (_pages[_targetPage[1]].pixmap.isNull() || !isPageScaled(_targetPage[1]))) {
-        startReadingPage(_targetPage[1]);
-    }
-
-    // Make sure the actions are in synch
-    updateEnabledActions();
-
-    if (!pageNumberShown) {
-        // Show the page number
-        emit showPageNumber(_targetPage[0], _targetPage[1], _numPages);
-    }
-
-    // If we're getting near the end of the buffer, fill it up
-    // Make sure that the buffer pages are decoded soon after this one
-    for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
-        if (_targetPage[0] + i < _numPages) {
-            startReadingPage(_targetPage[0] + i);
-        }
-        if (_targetPage[0] - i >= 0) {
-            startReadingPage(_targetPage[0] - i);
-        }
-    }
-
-    // Let other jobs go before the previous ones
-    decodeBlockDone();
-}
-
-void PageLoader::navigateForward()
-{
-    Q_ASSERT(_forwardEnabled);
-
-    // Choose new target pages
-    if (_twoPageMode) {
-        if (_targetPage[1] != -1) {
-            _targetPage[0] += 2;
-        } else {
-            _targetPage[0]++;
-        }
-
-        if (_targetPage[0] + 1 < _numPages) {
-            _targetPage[1] = _targetPage[0] + 1;
-            _primaryPage = 0;
-        } else {
-            _targetPage[1] = -1;
-        }
-
-    } else {
-        _targetPage[0]++;
-    }
-
-    // Change the page
-    changePage();
-}
-
-void PageLoader::navigateBackward()
-{
-    Q_ASSERT(_backwardEnabled);
-
-    // Choose new target pages
-    if (_twoPageMode) {
-        if (_targetPage[0] - 2 < 0) {
-            _targetPage[0]--;
-            _targetPage[1] = -1;
-
-        } else {
-            _targetPage[0] -= 2;
-            _targetPage[1] = _targetPage[0] + 1;
-            _primaryPage = 1;
-        }
-
-    } else {
-        _targetPage[0]--;
-    }
-
-    // Change the page
-    changePage();
-}
-
-void PageLoader::navigateForwardOnePage()
-{
-    Q_ASSERT(_forwardEnabled);
-
-    // Choose new target pages
-    if (_twoPageMode) {
-        _targetPage[0]++;
-
-        if (_targetPage[0] + 1 < _numPages) {
-            _targetPage[1] = _targetPage[0] + 1;
-            _primaryPage = 0;
-        } else {
-            _targetPage[1] = -1;
-        }
-
-    } else {
-        _targetPage[0]++;
-    }
-
-    // Change the page
-    changePage();
-}
-
-void PageLoader::navigateToStart()
-{
-    Q_ASSERT(_backwardEnabled);
-
-    // Choose new target pages
-    if (_twoPageMode) {
-        _targetPage[0] = 0;
-
-        if (_numPages > 1) {
-            _targetPage[1] = 1;
-            _primaryPage = 0;
-        } else {
-            _targetPage[1] = -1;
-        }
-
-    } else {
-        _targetPage[0] = 0;
-    }
-
-    // Reset the buffer
-    _bufferStart = _targetPage[0];
-    _bufferEnd = _targetPage[0];
-
-    // Change the page
-    changePage();
-}
-
-void PageLoader::navigateToEnd()
-{
-    Q_ASSERT(_forwardEnabled);
-
-    // Choose new target pages
-    if (_twoPageMode) {
-        if (_numPages > 1) {
-            _targetPage[1] = _numPages - 1;
-            _targetPage[0] = _numPages - 2;
-            _primaryPage = 1;
-
-        } else {
-            _targetPage[0] = 0;
-            _targetPage[1] = -1;
-        }
-
-    } else {
-        _targetPage[0]++;
-    }
-
-    // Reset the buffer
-    _bufferStart = _targetPage[0];
-    _bufferEnd = _targetPage[0];
-
-    // Change the page
-    changePage();
-}
-
-bool PageLoader::isForwardEnabled() const
-{
-    return _forwardEnabled;
-}
-bool PageLoader::isBackwardEnabled() const
-{
-    return _backwardEnabled;
-}
-
-void PageLoader::updateEnabledActions()
-{
-    bool oldForward = _forwardEnabled;
-    bool oldBackward = _backwardEnabled;
-
-    // See if there's room to navigate forwards or backwards
-    if (_numPages == 0) {
-        _forwardEnabled = false;
-        _backwardEnabled = false;
-    } else {
-        _backwardEnabled = _targetPage[0] > 0;
-        if (_targetPage[1] == -1) {
-            _forwardEnabled = _targetPage[0] + 1 < _numPages;
-        } else {
-            _forwardEnabled = _targetPage[1] + 1 < _numPages;
-        }
-    }
-
-    // Emit the signals only of the state changed
-    if (_forwardEnabled != oldForward) {
-        emit forwardEnabled(_forwardEnabled);
-    }
-    if (_backwardEnabled != oldBackward) {
-        emit backwardEnabled(_backwardEnabled);
-    }
-}
 
 void PageLoader::setDisplaySize(const QSize &displaySize)
 {
@@ -287,7 +52,7 @@ void PageLoader::setDisplaySize(const QSize &displaySize)
 
     if (_numPages > 0) {
         // A resize means that zoom mode is active
-        if (!_zoomMode) {
+        if (!_resizeMode) {
             startZoomMode();
         }
     }
@@ -308,27 +73,7 @@ void PageLoader::initialize(const QString &initialFile)
     updateEnabledActions();
 
     // Zoom mode doesn't start activated
-    _zoomMode = false;
-
-    KUrl path = KUrl::fromPath(initialFile);
-
-    // Check if we're opening plain files or an archive
-    if (FileInfo::isImageFile(initialFile)) {
-        _archiveMode = false;
-
-        // Start the directory listing
-        _fileLister.list(initialFile);
-
-    } else if (FileInfo::isArchiveFile(initialFile)) {
-        _archiveMode = true;
-        _archivePath = initialFile;
-        _archiveType = FileInfo::getArchiveType(_archivePath);
-
-        // Start the archive listing
-        _extractLister.list(_archiveType, _archivePath);
-    } else {
-        Q_ASSERT(false);
-    }
+    _resizeMode = false;
 }
 
 bool PageLoader::isPageScaled(int pageNum)
@@ -347,8 +92,8 @@ bool PageLoader::isPageScaled(int pageNum)
 
 void PageLoader::startZoomMode()
 {
-    Q_ASSERT(!_zoomMode);
-    _zoomMode = true;
+    Q_ASSERT(!_resizeMode);
+    _resizeMode = true;
 
     // When switching to zoom mode, re-decode the the current pages at full resolution
     startReadingPage(_targetPage[0]);
@@ -362,8 +107,8 @@ void PageLoader::startZoomMode()
 
 void PageLoader::stopZoomMode()
 {
-    Q_ASSERT(_zoomMode);
-    _zoomMode = false;
+    Q_ASSERT(_resizeMode);
+    _resizeMode = false;
 
     // Schedule the decoding of any unscaled pages
     _bufferStart = _targetPage[0];
@@ -389,7 +134,7 @@ void PageLoader::startReadingPage(int pageNum, bool highPriority)
     //Q_ASSERT(_pages[pageNum].pixmap.isNull());
 
     // If we're in zoom mode, decode an unscaled version of the page
-    if (_zoomMode) {
+    if (_resizeMode) {
         enqueuePage(pageNum, highPriority);
         // The buffer will have to be reaccessed after the zoom mode is finished
 
@@ -410,7 +155,7 @@ void PageLoader::startReadingPage(int pageNum, bool highPriority)
 
 void PageLoader::enqueuePage(int pageNum, bool highPriority)
 {
-    const QSize &size = _zoomMode ?QSize() :_displaySize;
+    const QSize &size = _resizeMode ?QSize() :_displaySize;
     // Note: if we're just resizing the window, maybe we don't need to scale from the image's
     //  full resolution. Then again, scaling from the full resolution will give the highest
     //  qualitity results
@@ -464,126 +209,10 @@ void PageLoader::decodeBlockDone()
 
 void PageLoader::decodeDone(ThreadWeaver::Job *job)
 {
-    DecodeJob *decodeJob = qobject_cast<DecodeJob *>(job);
-
-    Q_ASSERT(decodeJob != 0);
-
-    int pageNum = decodeJob->pageNum();
-    Q_ASSERT(_pages[pageNum].job == decodeJob);
-
-    // Check that the decode suceeded
-    if (decodeJob->image().isNull()) {
-        // Make sure the job's QImage is freed
-        delete decodeJob;
-        _pages[pageNum].isLoading = false;
-        _pages[pageNum].job = 0;
-        emit pageReadFailed(pageNum);
-        return;
-    }
-
-    QTime time;
-    time.start();
-    _pages[pageNum].pixmap = QPixmap::fromImage(decodeJob->image());
-    //kDebug()<<"QImage to QPixmap conversion: "<<time.elapsed()<<" ms"<<endl;
-
-    kDebug()<<"Page "<<pageNum<<" decoded: "<<_pages[pageNum].loadingTime.elapsed()<<" ms - "<<_pages[pageNum].pixmap.size()<<endl;
-
-    _pages[pageNum].fullSize = decodeJob->fullImageSize();
-    _pages[pageNum].isLoading = false;
-
-    // Make sure the job's QImage is freed
-    delete decodeJob;
-    _pages[pageNum].job = 0;
-
-    // Check that the image to pixmap conversion suceeded
-    if (_pages[pageNum].pixmap.isNull()) {
-        emit pageReadFailed(pageNum);
-        return;
-    }
-
-    // Check if the this page needs displaying
-    if (!_twoPageMode || _targetPage[1] == -1) {
-        if (pageNum == _targetPage[0]) {
-            emit showOnePage(_pages[pageNum].pixmap, _targetPage[0], _numPages);
-        }
-    } else {
-        // If two pages are being displayed, display them both at once
-        // If one of the pages is wide, only show the primary page
-        for (int i=0; i<2; i++) {
-            if (pageNum == _targetPage[i]) {
-                if (isPageWide(pageNum)) {
-                    //kDebug()<<"Page "<<pageNum<<", target 0 wide"<<endl;
-                    _targetPage[0] = _targetPage[_primaryPage];
-                    _targetPage[1] = -1;
-
-                    if (pageNum == _targetPage[0] || !_pages[_targetPage[0]].pixmap.isNull()) {
-                        emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
-                    }
-                    updateEnabledActions();
-                } else if (!_pages[_targetPage[!i]].pixmap.isNull()) {
-                    emit showTwoPages(_pages[_targetPage[0]].pixmap, _pages[_targetPage[1]].pixmap, _targetPage[0], _targetPage[1], _numPages);
-                } else {
-                    //kDebug()<<"Can't display "<<pageNum<<endl;
-                }
-                break;
-            }
-        }
-    }
-
-    // If the page was decoded at the wrong size, decode it over
-    if ((pageNum == _targetPage[0] || pageNum == _targetPage[1]) &&
-            ((_zoomMode && _pages[pageNum].pixmap.size() != _pages[pageNum].fullSize) ||
-             (!_zoomMode && !isPageScaled(pageNum)))) {
-        startReadingPage(pageNum);
-        decodeBlockDone();
-    }
 }
 
 void PageLoader::listingDone(int initialPosition, const QStringList &files)
 {
-    Q_ASSERT(files.size() > 0);
-
-    Page newPage;
-
-    // Create a page entry for each file
-    kDebug()<<"Total pages: "<<files.size()<<endl;
-    for (QStringList::const_iterator i = files.begin(); i != files.end(); i++) {
-        newPage.path = *i;
-        _pages.append(newPage);
-
-        kDebug()<<"Path: "<<_pages.back().path<<endl;
-    }
-    _numPages = _pages.size();
-
-    // Choose the starting page(s)
-    _targetPage[0] = initialPosition;
-    if (_twoPageMode) {
-        if (_targetPage[0] + 1 < _numPages) {
-            _primaryPage = 0;
-            _targetPage[1] = initialPosition + 1;
-        } else {
-            _targetPage[1] = -1;
-        }
-    }
-
-    // Synch the actions
-    updateEnabledActions();
-
-    // Start reading pages
-    _bufferStart = initialPosition;
-    _bufferEnd = initialPosition;
-    startReadingPage(initialPosition);
-    for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
-        if (initialPosition + i < _numPages) {
-            startReadingPage(initialPosition + i);
-        }
-        if (initialPosition - i >= 0) {
-            startReadingPage(initialPosition - i);
-        }
-    }
-
-    // Let other jobs go before the previous ones
-    decodeBlockDone();
 }
 
 

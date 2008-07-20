@@ -3,7 +3,7 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
                           http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
-    <ToolBar name="mainToolBar" ><text>Main Toolbar</text>
+    <ToolBar name="mainToolBar"><text>Main Toolbar</text>
         <Action name="file_open" />
         <Separator/>
         <Action name="page_left" />
@@ -13,13 +13,19 @@
         <Action name="page_to_end" />
         <Separator/>
         <Action name="fullscreen" />
+        <Action name="options_show_menubar" />
     </ToolBar>
     <MenuBar>
-        <Menu name="navigate" ><text>&amp;Navigate</text>
+        <Menu name="navigate"><text>&amp;Navigate</text>
             <Action name="page_left" />
             <Action name="page_right" />
             <Action name="page_to_start" />
             <Action name="page_to_end" />
+        </Menu>
+        <Menu name="view"><text>&amp;View</text>
+            <Action name="zoom_toggle" />
+            <Action name="zoom_in" />
+            <Action name="zoom_out" />
         </Menu>
     </MenuBar>
 </kcfg>

@@ -8,7 +8,11 @@
 #include <KAction>
 #include <QBasicTimer>
 
-#include "pageloader.h"
+#include "pagecache.h"
+#include "filelister.h"
+#include "extractlister.h"
+#include "filedecodethread.h"
+#include "extractdecodethread.h"
 #include "pagedisplay.h"
 
 class Yomikata : public KMainWindow
@@ -17,6 +21,7 @@ class Yomikata : public KMainWindow
 
 public:
     Yomikata(const QString &initialArg, QWidget *parent=0);
+    ~Yomikata();
 
 private slots:
     void open();
@@ -28,7 +33,13 @@ private slots:
     void enableForward(bool enabled);
     void enableBackward(bool enabled);
 
+    void enableZoomToggle(bool enabled);
+    void enableZoomIn(bool enabled);
+    void enableZoomOut(bool enabled);
+
 private:
+    void startListing(const QString &initialFile);
+
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
 
@@ -37,19 +48,34 @@ private:
     void setAppDefaults();
 
 private:
+    // Current state
     enum PageMode {SingleMode, ComicsMode, MangaMode};
     PageMode _pageMode;
 
-    PageLoader _pageLoader;
+    // Loaded modules
+    PageCache _pageCache;
+    FileLister _fileLister;
+    ExtractLister _extractLister;
+    FileDecodeThread _fileDecodeThread;
+    ExtractDecodeThread _extractDecodeThread;
+    PageDisplay _pageDisplay;
 
-    PageDisplay *_pageDisplay;
-
+    // Actions
     QAction *_pageForwardAction;
     QAction *_pageBackwardAction;
     KAction *_pageLeftAction;
     KAction *_pageRightAction;
     KAction *_pageToStartAction;
     KAction *_pageToEndAction;
+
+    KAction *_zoomToggleAction;
+    KAction *_zoomInAction;
+    KAction *_zoomOutAction;
+
+    // Loading stuff
+    bool _archiveMode;
+    QString _archivePath;
+    FileInfo::ArchiveType _archiveType;
 };
 
 #endif

@@ -2,21 +2,50 @@
 #include <QPaintEvent>
 #include <QMouseEvent>
 #include <KDebug>
+#include <QTime>
+#include <QTextStream>
 
 #include "pagedisplay.h"
+
+#include "simplescroller.h"
+#include "inertiascroller.h"
+
+const qreal PageDisplay::ZOOM_MODES[] = {1.2, 2.0, 3.0, -1.0};
 
 PageDisplay::PageDisplay(QWidget *parent)
     :QWidget(parent)
 {
+    _displaying = false;
     _mangaMode = true;
     _zoomEnabled = false;
-    _displaySize = size();
+    _zoomIndex = 1;
+    _boundingSize = _displaySize = size();
 
     _pageNumberLabel = new QLabel(this);
     _pageNumberLabel->hide();
     _pageNumberLabel->setBackgroundRole(QPalette::Window);
     _pageNumberLabel->setAutoFillBackground(true);
     _pageNumberLabel->setAlignment(Qt::AlignCenter);
+
+
+    _zoomLabel = new QLabel(this);
+    _zoomLabel->hide();
+    _zoomLabel->setBackgroundRole(QPalette::Window);
+    _zoomLabel->setAutoFillBackground(true);
+    _zoomLabel->setAlignment(Qt::AlignCenter);
+
+    _displayScroller = new InertiaScroller(this);
+    //_displayScroller = new SimpleScroller(this);
+    connect(_displayScroller, SIGNAL(moved(const QPoint&)), this, SLOT(moveDisplay(const QPoint&)));
+
+    setMouseTracking(true);
+
+    _mouseOver = false;
+}
+
+void PageDisplay::loadingStarted()
+{
+    changeCursor(Qt::WaitCursor);
 }
 
 void PageDisplay::setMangaMode(bool enabled)
@@ -30,9 +59,17 @@ void PageDisplay::setOnePage(const QPixmap &pixmap, int pageNum, int totalPages)
     int previousUpdateStatus = updatesEnabled();
     setUpdatesEnabled(false);
 
+    // If this is the first page being displayed, start the mouse idle timer and enable zoom
+    if (!_displaying) {
+        _displaying = true;
+        mouseMoved();
+        emit zoomToggleEnabled(true);
+    }
+
     // There is a new pixmap to display
     _pixmap[0] = pixmap;
     _scaledPixmap[0] = QPixmap();
+    _doFullScale[0] = false;
     _pixmap[1] = QPixmap();
     _singlePage = true;
 
@@ -56,6 +93,13 @@ void PageDisplay::setTwoPages(const QPixmap &pixmapA, const QPixmap &pixmapB, in
     int previousUpdateStatus = updatesEnabled();
     setUpdatesEnabled(false);
 
+    // If these are the first pages being displayed, start the mouse idle timer and enable zoom
+    if (!_displaying) {
+        _displaying = true;
+        mouseMoved();
+        emit zoomToggleEnabled(true);
+    }
+
     // There are new pixmaps to display
     if (_mangaMode) {
         _pixmap[1] = pixmapA;
@@ -66,6 +110,8 @@ void PageDisplay::setTwoPages(const QPixmap &pixmapA, const QPixmap &pixmapB, in
     }
     _scaledPixmap[0] = QPixmap();
     _scaledPixmap[1] = QPixmap();
+    _doFullScale[0] = false;
+    _doFullScale[1] = false;
     _singlePage = false;
 
     // Position everything correctly
@@ -110,19 +156,32 @@ void PageDisplay::setPageNumber(int pageNumA, int pageNumB, int totalPages)
 
 void PageDisplay::toggleZoom()
 {
-    // Don't toggle the zoom if nothing's being displayed
-    if (_pixmap[0].isNull()) {
-        return;
-    }
+    int previousUpdateStatus = updatesEnabled();
+    setUpdatesEnabled(false);
+
+    // Assert something's being displayed
+    Q_ASSERT(_displaying);
 
     _zoomEnabled = !_zoomEnabled;
-    setMouseTracking(_zoomEnabled);
     _newMousePath = true;
 
     if (_zoomEnabled) {
-        setCursor(Qt::BlankCursor);
+        changeCursor(Qt::BlankCursor);
     } else {
-        setCursor(Qt::ArrowCursor);
+        mouseMoved();
+    }
+
+    if (!_zoomEnabled) {
+        // Disable the scroller
+        _displayScroller->stop();
+    }
+
+    // Update action enabled statuses
+    if (!_zoomEnabled) {
+        emit zoomInEnabled(false);
+        emit zoomOutEnabled(false);
+    } else {
+        updateZoomStatus();
     }
 
     adjustLayout();
@@ -130,15 +189,118 @@ void PageDisplay::toggleZoom()
     update();
 
     // Tell the loader that the display size is changing
-    emit displaySizeChanged(_displaySize);
+    emit displaySizeChanged(_boundingSize);
+
+    if (_zoomEnabled) {
+        // Show the zoom label
+        showZoomLabel();
+    } else {
+        // Immediately hide the zoom label
+        _zoomTimer.stop();
+        _zoomLabel->hide();
+    }
+
+    setUpdatesEnabled(previousUpdateStatus);
+}
+
+void PageDisplay::zoomIn()
+{
+    Q_ASSERT(_zoomEnabled && ZOOM_MODES[_zoomIndex + 1] != -1.0);
+
+    int previousUpdateStatus = updatesEnabled();
+    setUpdatesEnabled(false);
+
+    _zoomIndex++;
+
+    updateZoomStatus();
+
+    adjustLayout();
+
+    update();
+
+    // Tell the loader that the display size is changing
+    emit displaySizeChanged(_boundingSize);
+
+    kDebug()<<"Zoom "<<_boundingSize<<endl;
+
+    // Show the zoom label
+    showZoomLabel();
+
+    setUpdatesEnabled(previousUpdateStatus);
+}
+
+void PageDisplay::zoomOut()
+{
+    Q_ASSERT(_zoomEnabled && _zoomIndex > 0);
+
+    int previousUpdateStatus = updatesEnabled();
+    setUpdatesEnabled(false);
+
+    _zoomIndex--;
+
+    updateZoomStatus();
+
+    adjustLayout();
+
+    update();
+
+    // Tell the loader that the display size is changing
+    emit displaySizeChanged(_boundingSize);
+
+    kDebug()<<"Zoom "<<_boundingSize<<endl;
+
+    // Show the zoom label
+    showZoomLabel();
+
+    setUpdatesEnabled(previousUpdateStatus);
+}
+
+void PageDisplay::updateZoomStatus()
+{
+    emit zoomInEnabled(ZOOM_MODES[_zoomIndex + 1] != -1.0);
+    emit zoomOutEnabled(_zoomIndex > 0);
+}
+
+void PageDisplay::showZoomLabel()
+{
+    // Stop the timer to hide the zoom label
+    _zoomTimer.stop();
+
+    // Show the zoom label
+    const int WIDTH_PADDING = 20;
+    QString text;
+    QTextStream textStream(&text);
+    textStream.setRealNumberNotation(QTextStream::FixedNotation);
+    textStream.setRealNumberPrecision(1);
+    textStream<<ZOOM_MODES[_zoomIndex]<<'x';
+    QFontMetrics metrics(_zoomLabel->font());
+    _zoomLabel->resize(metrics.width(text) + WIDTH_PADDING, _pageNumberLabel->height());
+    _zoomLabel->setText(text);
+    _zoomLabel->move(width() - _zoomLabel->width(), 0);
+    _zoomLabel->raise();
+    _zoomLabel->show();
+}
+void PageDisplay::hideZoomLabel()
+{
+    // Restart the timer to hide the zoom label
+    const int ZOOM_LABEL_HIDE_DELAY = 1500;
+    _zoomTimer.stop();
+    _zoomTimer.start(ZOOM_LABEL_HIDE_DELAY, this);
 }
 
 void PageDisplay::paintEvent(QPaintEvent *event)
 {
     // Make sure we have something to paint
-    if (_pixmap[0].isNull()) {
+    if (!_displaying) {
         return;
     }
+
+    //kDebug()<<"Painting "<<event->rect()<<endl;
+
+    //QTime time;time.start();
+
+    QPainter painter(this);
+    //painter.setRenderHint(QPainter::SmoothPixmapTransform );
 
     for (int i=0; i<(_singlePage?1:2); i++) {
         QRect paintRect(event->rect().intersected(_destRect[i]));
@@ -146,8 +308,6 @@ void PageDisplay::paintEvent(QPaintEvent *event)
         if (paintRect.isEmpty()) {
             continue;
         }
-
-        QPainter painter(this);
 
         if (_prescaled[i]) {
             if (paintRect == _destRect[i] && !_zoomEnabled) {
@@ -159,10 +319,33 @@ void PageDisplay::paintEvent(QPaintEvent *event)
                 painter.drawPixmap(paintRect, _pixmap[i], QRect(delta, paintRect.size()));
             }
         } else {
-            if (_scaledPixmap[i].isNull()) {
+            /*const bool PRE_FAST_SCALE = false;
+            if (PRE_FAST_SCALE && _scaledPixmap[i].isNull() && !_doFullScale[i]) {
+
+                // Move the source rectangle up and left compared to the destination rectangle
+                //  and scale it to the size of the original pixmap
+                QPoint delta = paintRect.topLeft() - _destRect[i].topLeft();
+                qreal scaleFactor = qreal(_pixmap[i].height()) / qreal(_destRect[i].height());
+                QRect sourceRect(delta * scaleFactor, paintRect.size() * scaleFactor);
+
+                // Do a fast scale of the image
+                painter.drawPixmap(paintRect, _pixmap[i], sourceRect);
+
+                kDebug()<<"Unscaled "<<QRect(delta, paintRect.size())<<"scaled "<<QRect(delta * scaleFactor, paintRect.size() * scaleFactor)<<endl;
+                // Schedule a full scale
+                //_doFullScale[i] = true;
+                //update();
+
+            } else {
+                if ((!PRE_FAST_SCALE && _scaledPixmap[i].isNull())|| (PRE_FAST_SCALE && _doFullScale[i])) {
+            }*/
+            if (!_doFullScale[i]) {
                 // Scale the pixmap up/down for the first time
+                //kDebug()<<"Scaling"<<endl;
                 _scaledPixmap[i] = _pixmap[i].scaled(_destRect[i].size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                _doFullScale[i] = true;
             }
+
             if (paintRect == _destRect[i] && !_zoomEnabled) {
                 // Paint everything
                 painter.drawPixmap(_destRect[i].topLeft(), _scaledPixmap[i]);
@@ -174,21 +357,28 @@ void PageDisplay::paintEvent(QPaintEvent *event)
 
             // Debug: show that a page isn't loaded correctly
             painter.setPen(Qt::red);
-            painter.drawLine(_destRect[i].topLeft(), _destRect[i].bottomRight());
-            painter.drawLine(_destRect[i].topRight(), _destRect[i].bottomLeft());
+            painter.drawLine(paintRect.topLeft(), paintRect.bottomRight());
+            painter.drawLine(paintRect.topRight(), paintRect.bottomLeft());
+
         }
     }
+
+    if (_zoomEnabled && !_zoomLabel->isHidden()) {
+        hideZoomLabel();
+    }
+
+    //int t = time.elapsed(); if (t > 1) {kDebug()<<"Paint: "<<time.elapsed()<<endl;}
 }
 
 void PageDisplay::adjustLayout()
 {
-    Q_ASSERT(!_pixmap[0].isNull());
+    Q_ASSERT(_displaying);
 
     // Reset the display size
     if (_zoomEnabled) {
-        _displaySize = size() * 2;
+        _boundingSize = _displaySize = size() * ZOOM_MODES[_zoomIndex];
     } else {
-        _displaySize = size();
+        _boundingSize = _displaySize = size();
     }
 
     if (_singlePage) {
@@ -204,9 +394,13 @@ void PageDisplay::adjustLayout()
         if (_zoomEnabled) {
             if (imageSize.height() > height()) {
                 _displaySize.setHeight(imageSize.height());
+            } else {
+                _displaySize.setHeight(height());
             }
             if (imageSize.width() > width()) {
                 _displaySize.setWidth(imageSize.width());
+            } else {
+                _displaySize.setWidth(width());
             }
         }
 
@@ -223,6 +417,7 @@ void PageDisplay::adjustLayout()
 
         // The previous scaled pixmap isn't any use
         _scaledPixmap[0] = QPixmap();
+        _doFullScale[0] = false;
 
     } else {
         Q_ASSERT(!_pixmap[1].isNull());
@@ -259,9 +454,13 @@ void PageDisplay::adjustLayout()
         if (_zoomEnabled) {
             if (togetherSize.height() > height()) {
                 _displaySize.setHeight(togetherSize.height());
+            } else {
+                _displaySize.setHeight(height());
             }
             if (togetherSize.width() > width()) {
                 _displaySize.setWidth(togetherSize.width());
+            } else {
+                _displaySize.setWidth(width());
             }
         }
 
@@ -279,57 +478,86 @@ void PageDisplay::adjustLayout()
             _destRect[1].moveTo(_destRect[0].right() + 1, _destRect[0].top());
         }
 
-        //kDebug()<<"Widget "<<size()<<", dest rects "<<_destRect[0]<<_destRect[1]<<endl;
+        //kDebug()<<"Widget "<<size()<<"display "<<_displaySize<<", dest rects "<<_destRect[0]<<_destRect[1]<<endl;
 
         // The previous scaled pixmaps aren't any use
         _scaledPixmap[0] = QPixmap();
         _scaledPixmap[1] = QPixmap();
+        _doFullScale[0] = false;
+        _doFullScale[1] = false;
     }
 
     if (_zoomEnabled) {
-        // Initialize the viewport position
-        if (_mangaMode) {
-            // Show the far right side of the images
-            _offset.setX(width() - _displaySize.width());
-            _offset.setY(0);
+        // Determine where the viewport starts and how far it can move
+        QRect bounds;
+        QPoint offset;
+        if (_displaySize.width() == width()) {
+            // The pages are padded on the left and right
+            bounds.setLeft(_destRect[0].left());
+            bounds.setRight(_destRect[0].left());
+            offset.setX(_destRect[0].left());
+
         } else {
-            _offset.setX(0);
-            _offset.setY(0);
+            // The pages are free to move horizontally
+            bounds.setLeft(width() - _displaySize.width());
+            bounds.setRight(0);
+            if (_mangaMode) {
+                // Show the far right side of the images
+                offset.setX(width() - _displaySize.width());
+            } else {
+                offset.setX(0);
+            }
+        }
+
+        if (_displaySize.height() == height()) {
+            // The pages are padded on the top and bottom
+            bounds.setTop(_destRect[0].top());
+            bounds.setBottom(_destRect[0].top());
+            offset.setY(_destRect[0].top());
+
+        } else {
+            // The pages are free to move vertically
+            bounds.setTop(height() - _displaySize.height());
+            bounds.setBottom(0);
+            offset.setY(0);
         }
 
         // Move the dest rects based on the current offset
-        _destRect[0].translate(_offset);
+        _destRect[0].moveTo(offset);
         if (!_singlePage) {
-            _destRect[1].translate(_offset);
+            Q_ASSERT(_destRect[0].height() == _destRect[1].height());
+            _destRect[1].moveTo(offset + QPoint(_destRect[0].width(), 0));
         }
 
         _newMousePath = true;
 
-        /*// Trim the dest rects to the size of the the widget
-        _destRect[0] &= rect();
-        if (!_singlePage) {
-            _destRect[1] &= rect();
-        }*/
+        // Tell the display scroller to reset
+        _displayScroller->reset(bounds, ZOOM_MODES[_zoomIndex], offset);
     }
 }
 
 void PageDisplay::resizeEvent(QResizeEvent *)
 {
-    // Don't move the label, just hide it
+    // Don't move the labels, just hide them
     if (_pageNumberLabel->isVisible()) {
         _pageNumberTimer.stop();
 
         _pageNumberLabel->hide();
     }
+    if (_zoomLabel->isVisible()) {
+        _zoomTimer.stop();
+
+        _zoomLabel->hide();
+    }
 
     // If there are pages being displayed, position them correctly
-    if (!_pixmap[0].isNull()) {
+    if (_displaying) {
 
         // Put the pages in the right places
         adjustLayout();
 
         // Tell the loader that the display size is changing
-        emit displaySizeChanged(size());
+        emit displaySizeChanged(_boundingSize);
 
         update();
     } else {
@@ -341,10 +569,18 @@ void PageDisplay::enterEvent(QEvent *)
 {
     //kDebug()<<"Mouse entered widget"<<endl;
     _newMousePath = true;
+    _mouseOver = true;
+    setCursor(_cursor);
+}
+void PageDisplay::leaveEvent(QEvent *)
+{
+    _mouseOver = false;
+    setCursor(Qt::ArrowCursor);
 }
 
-void PageDisplay::mouseMoveEvent (QMouseEvent * event)
+void PageDisplay::mouseMoveEvent(QMouseEvent *event)
 {
+    //setMouseTracking(false);
     if (!_zoomEnabled) {
         event->ignore();
 
@@ -353,47 +589,85 @@ void PageDisplay::mouseMoveEvent (QMouseEvent * event)
         _previousMousePosition = event->pos();
         //kDebug()<<"Mouse started path "<<event->pos()<<endl;
 
+        event->accept();
+
     } else {
-        QPoint delta = _previousMousePosition - event->pos();
+        QPoint delta = event->pos() - _previousMousePosition;
         //kDebug()<<"Mouse moved "<<delta<<endl;
 
-        delta *= 2;
-
-        if (_offset.x() + delta.x() < width() - _displaySize.width()) {
-            delta.setX(width() - _displaySize.width() - _offset.x());
-        } else if (_offset.x() + delta.x() > 0) {
-            delta.setX(-_offset.x());
-        }
-        if (_offset.y() + delta.y() < height() - _displaySize.height()) {
-            delta.setY(height() - _displaySize.height() - _offset.y());
-        } else if (_offset.y() + delta.y() > 0) {
-            delta.setY(-_offset.y());
-        }
-
-        if (!delta.isNull()) {
-            _offset += delta;
-            //kDebug()<<"Delta capped at "<<delta<<endl;
-
-            // Move the dest rects based on the current offset
-            _destRect[0].translate(delta);
-            if (!_singlePage) {
-                _destRect[1].translate(delta);
-            }
-
-            update();
-        }
+        _displayScroller->mouseMoved(-delta);
 
         _previousMousePosition = event->pos();
+
+        event->accept();
+    }
+
+    // Show the mouse and start counting idle time
+    mouseMoved();
+    //setMouseTracking(true);
+}
+
+void PageDisplay::moveDisplay(const QPoint &newPosition)
+{
+    // Move the top-left corner of the display
+    _destRect[0].moveTo(newPosition);
+    if (!_singlePage) {
+        Q_ASSERT(_destRect[0].height() == _destRect[1].height());
+        _destRect[1].moveTo(newPosition + QPoint(_destRect[0].width(), 0));
+    }
+
+    //int previousUpdateStatus = updatesEnabled();
+    //setUpdatesEnabled(false);
+
+    repaint();
+    //update();
+
+    //setUpdatesEnabled(previousUpdateStatus);
+}
+
+void PageDisplay::mouseMoved()
+{
+    // Show the cursor and start counting idle time (if it's not zoom mode)
+    if (_displaying && !_zoomEnabled) {
+        changeCursor(Qt::ArrowCursor);
+
+        const int MOUSE_HIDE_DELAY = 2500;
+        _mouseIdleTimer.stop();
+        _mouseIdleTimer.start(MOUSE_HIDE_DELAY, this);
+    }
+}
+
+void PageDisplay::changeCursor(QCursor change)
+{
+    _cursor = change;
+    if (_mouseOver) {
+        setCursor(_cursor);
     }
 }
 
 void PageDisplay::timerEvent(QTimerEvent *event)
 {
-    Q_ASSERT(event->timerId() == _pageNumberTimer.timerId());
+    Q_ASSERT(_displaying);
+    if (event->timerId() == _pageNumberTimer.timerId()) {
+        // Hide the page number
+        _pageNumberTimer.stop();
+        _pageNumberLabel->hide();
 
-    // Hide the page number
-    _pageNumberTimer.stop();
-    _pageNumberLabel->hide();
+    } else if (event->timerId() == _zoomTimer.timerId()) {
+        // Hide the zoom label
+        _zoomTimer.stop();
+        _zoomLabel->hide();
+
+    } else if (event->timerId() == _mouseIdleTimer.timerId()) {
+        // Hide the cursor if pages are displayed (and it's not zoom mode)
+        _mouseIdleTimer.stop();
+        if (!_zoomEnabled) {
+            changeCursor(Qt::BlankCursor);
+        }
+
+    } else {
+        Q_ASSERT(false);
+    }
 }
 
 #include "pagedisplay.moc"

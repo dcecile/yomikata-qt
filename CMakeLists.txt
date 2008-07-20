@@ -6,15 +6,21 @@ include(KDE4Defaults)
 set(yomikata_SRCS
   main.cpp
   yomikata.cpp
-  pagedisplay.cpp
-  pageloader.cpp
   fileinfo.cpp
-  decodejob.cpp
-  filedecodejob.cpp
-  extractdecodejob.cpp
+
+  pagecache.cpp
   lister.cpp
   filelister.cpp
   extractlister.cpp
+  decodethread.cpp
+  filedecodethread.cpp
+  extractdecodethread.cpp
+
+  pagedisplay.cpp
+  displayscroller.cpp
+  simplescroller.cpp
+  inertiascroller.cpp
+  testwidget.cpp
 )
 
 kde4_automoc(${yomikata_SRCS})
