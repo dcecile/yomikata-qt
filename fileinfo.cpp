@@ -4,10 +4,16 @@
 
 #include "fileinfo.h"
 
+// Note: http://en.wikipedia.org/wiki/CDisplay_RAR_Archived_Comic_Book_File
+//  talks about the "comic book archive" format
+
 const char *FileInfo::IMAGE_TYPES[] = {
     ".jpg",
     ".jpeg",
     ".png",
+    ".gif",
+    ".bmp",
+    ".tiff",
     ""
 };
 // Note: maybe QImageReader::supportedImageFormats() should be used for image formats
@@ -20,17 +26,20 @@ const FileInfo::ArchiveTypeInfo FileInfo::ARCHIVE_TYPES[] = {
     {".tar.bz", TarBz},
     {".tar.bz2", TarBz},
     {".tbz2", TarBz},
+    {".tar.Z", TarZ}, // Using "compress"
     {".zip", Zip},
     {".cbz", Zip},
     {".rar", Rar},
     {".cbr", Rar},
+    // Ace
+    // 7zip
     {"", InvalidArchiveType},
 };
 
 bool FileInfo::isImageFile(const QString& filename)
 {
     for (int i = 0; *IMAGE_TYPES[i] != '\0'; i++) {
-        if (filename.endsWith(IMAGE_TYPES[i])) {
+        if (filename.endsWith(IMAGE_TYPES[i], Qt::CaseInsensitive)) {
             return true;
         }
     }
@@ -39,7 +48,7 @@ bool FileInfo::isImageFile(const QString& filename)
 bool FileInfo::isArchiveFile(const QString& filename)
 {
     for (int i = 0; *ARCHIVE_TYPES[i].ext != '\0'; i++) {
-        if (filename.endsWith(ARCHIVE_TYPES[i].ext)) {
+        if (filename.endsWith(ARCHIVE_TYPES[i].ext, Qt::CaseInsensitive)) {
             return true;
         }
     }
@@ -48,7 +57,7 @@ bool FileInfo::isArchiveFile(const QString& filename)
 FileInfo::ArchiveType FileInfo::getArchiveType(const QString& filename)
 {
     for (int i = 0; *ARCHIVE_TYPES[i].ext != '\0'; i++) {
-        if (filename.endsWith(ARCHIVE_TYPES[i].ext)) {
+        if (filename.endsWith(ARCHIVE_TYPES[i].ext, Qt::CaseInsensitive)) {
             return ARCHIVE_TYPES[i].type;
         }
     }

@@ -1,5 +1,6 @@
 #include <KDebug>
 #include <QTextCodec>
+#include <QTextStream>
 
 #include "extractlister.h"
 
@@ -27,13 +28,39 @@ void ExtractLister::list(FileInfo::ArchiveType archiveType, const QString &archi
     _filenameLine = true;
     _listingBodyFinished = false;
     _currentInputLine = "";
+    _listingTime.restart();
 
     // List the contents of the archive
 
     QString command;
     QStringList args;
 
-    switch (archiveType) {
+    _archiveType = archiveType;
+    switch (_archiveType) {
+    case FileInfo::Tar:
+        command = "tar";
+        args<<"-tvf";
+        _numFields = 5;
+        _sizeField = 2;
+        break;
+    case FileInfo::TarGz:
+        command = "tar";
+        args<<"-ztvf";
+        _numFields = 5;
+        _sizeField = 2;
+        break;
+    case FileInfo::TarBz:
+        command = "tar";
+        args<<"--bzip2"<<"-tvf";
+        _numFields = 5;
+        _sizeField = 2;
+        break;
+    case FileInfo::TarZ:
+        command = "tar";
+        args<<"-Ztvf";
+        _numFields = 5;
+        _sizeField = 2;
+        break;
     case FileInfo::Zip:
         command = "unzip";
         args<<"-l"<<"-qq";
@@ -53,7 +80,7 @@ void ExtractLister::list(FileInfo::ArchiveType archiveType, const QString &archi
             this, SLOT(nonRarOutputText()));
     disconnect(&_process, SIGNAL(readyReadStandardOutput()),
             this, SLOT(rarOutputText()));
-    if (archiveType != FileInfo::Rar) {
+    if (_archiveType != FileInfo::Rar) {
         connect(&_process, SIGNAL(readyReadStandardOutput()),
                 this, SLOT(nonRarOutputText()));
     } else {
@@ -76,9 +103,26 @@ void ExtractLister::nonRarOutputText()
         // New line found
         // Fill a full line of input, excluding the new line
         _currentInputLine.append(output.left(newLineIdx));
-        //kDebug()<<"Got full line of output: "<<QString(_currentInputLine)<<endl;
 
+        /*
+        QTextStream stream(_currentInputLine);
+        stream.setCodec("utf-8");
+        QString temp;
+
+        do {
+            stream>>temp;
+            kDebug()<<"Pulled string "<<temp<<endl;
+            kDebug()<<"Stream status "<<stream.status()<<endl;
+        } while (stream.status() != QTextStream::ReadPastEnd);
+        Q_ASSERT(false);
+        //*/
+
+        //*
+        //kDebug()<<"Got full line of output: "<<QString(_currentInputLine)<<endl;
+        //kDebug()<<"Line length "<<_currentInputLine.length()<<endl;
+        //QString fullLine = _currentInputLine;
         QString fullLine = QTextCodec::codecForName("utf-8")->toUnicode(_currentInputLine);
+        //QString fullLine = QTextCodec::codecForName("Shift-JIS")->toUnicode(_currentInputLine);
         QStringList data = fullLine.split(" ");
 
         // Skip fields before size field
@@ -86,7 +130,6 @@ void ExtractLister::nonRarOutputText()
             while (data.front().isEmpty()) {
                 data.pop_front();
             }
-            kDebug()<<"Skipping "<<data.front()<<endl;
             data.pop_front();
         }
 
@@ -94,7 +137,6 @@ void ExtractLister::nonRarOutputText()
         while (data.front().isEmpty()) {
             data.pop_front();
         }
-        kDebug()<<"Skipping "<<data.front()<<endl;
 
         // A size 0 is probably a directory, maybe an empty file; ignore this entry
         if (data.front() != "0") {
@@ -105,7 +147,6 @@ void ExtractLister::nonRarOutputText()
                 while (data.front().isEmpty()) {
                     data.pop_front();
                 }
-                kDebug()<<"Skipping "<<data.front()<<endl;
                 data.pop_front();
             }
 
@@ -114,9 +155,11 @@ void ExtractLister::nonRarOutputText()
 
             if (FileInfo::isImageFile(filename)) {
                 // This is an image file
+                //kDebug()<<"Filename length "<<filename.length()<<endl;
                 _fileList<<filename;
             }
         }
+        //*/
 
         // Start a new line of input, excluding the new line
         _currentInputLine = "";
@@ -201,7 +244,7 @@ void ExtractLister::rarOutputText()
 
 void ExtractLister::errorText()
 {
-    kDebug()<<"Error text ready"<<endl;
+    kDebug()<<"extracter: "<<QTextCodec::codecForName("utf-8")->toUnicode(_process.readAllStandardError())<<endl;
 }
 
 void ExtractLister::error(QProcess::ProcessError error)
@@ -215,9 +258,49 @@ void ExtractLister::finished(int exitCode, QProcess::ExitStatus exitStatus)
     Q_ASSERT(exitCode == 0);
     Q_ASSERT(exitStatus == QProcess::NormalExit);
 
+    if (_archiveType == FileInfo::Zip) {
+        // Unzip has huge problems with filenames, so try to clean them up a bit
+        // For example, it can't handle '[' or ']' in the path
+        //  or filenames encoded from a non-UTF charset like Shift-JIS
+        cleanZipFilenames();
+    }
+
+    kDebug()<<"Listing finished: "<<_listingTime.elapsed()<<" ms"<<endl;
+
     // Note: pages might not be in a good order, depending on the decompressor's
     //  "sorting" logic
     emit listBuilt(0, _fileList);
+}
+
+void ExtractLister::cleanZipFilenames()
+{
+    QString file;
+    bool changed;
+    for (QStringList::iterator i = _fileList.begin(); i != _fileList.end(); i++) {
+        file = *i;
+        changed = false;
+        //kDebug()<<"Looking at file "<<file<<endl;
+
+        // If the filename has any "bad" characters, replace them with the wildcard '*'
+        for (int j=0; j<file.length(); j++) {
+            //kDebug()<<"Is letter / number "<<file[j].isLetterOrNumber()<<endl;
+            if (!file[j].isLetterOrNumber()) {
+                const char ascii = file[j].toAscii();
+                //kDebug()<<"Char "<<j<<" "<<file[j]<<"- "<<int((unsigned char)ascii)<<endl;
+                if (ascii == 0 || !(ascii == ' ' || ascii == '_' || ascii == '/' || ascii == '.')) {
+                    file[j] = '*';
+                    changed = true;
+                }
+            }
+        }
+
+        // Collapse any wildcard characters
+        if (changed) {
+            *i = file;//file.split("*", QString::SkipEmptyParts).join("*");
+        }
+        //kDebug()<<"New name "<<*i<<endl;
+        //Q_ASSERT(false);
+    }
 }
 
 #include "extractlister.moc"

@@ -4,6 +4,7 @@
 #include <QProcess>
 #include <QStringList>
 #include <QByteArray>
+#include <QTime>
 
 #include "fileinfo.h"
 
@@ -27,9 +28,14 @@ private slots:
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
+    void cleanZipFilenames();
+
+private:
     QStringList _fileList;
 
     QProcess _process;
+
+    FileInfo::ArchiveType _archiveType;
 
     int _numFields;
     int _sizeField;
@@ -38,6 +44,8 @@ private:
     bool _listingBodyFinished;
     bool _filenameLine;
     QByteArray _currentInputLine;
+
+    QTime _listingTime;
 };
 
 #endif

@@ -10,9 +10,10 @@
 #include <QTime>
 #include <QProcess>
 
+#include "fileinfo.h"
 #include "filelister.h"
 #include "extractlister.h"
-#include "fileinfo.h"
+#include "decodejob.h"
 
 using ThreadWeaver::Job; // HACK
 
@@ -52,7 +53,9 @@ signals:
 private:
     void updateEnabledActions();
 
-    void startReadingPage(int pageNum);
+    void startReadingPage(int pageNum, bool highPriority = true);
+    void enqueuePage(int pageNum, bool highPriority);
+    void decodeBlockDone();
 
     void changePage();
 
@@ -89,6 +92,7 @@ private:
         bool isLoading;
         bool isScaled;
         QTime loadingTime;
+        DecodeJob *job;
     };
 
     QList<Page> _pages;
@@ -98,6 +102,7 @@ private:
     int _bufferEnd;
 
     ThreadWeaver::Weaver _decodeWeaver;
+    QList<DecodeJob *> _decodeBlock;
 
     FileLister _fileLister;
     ExtractLister _extractLister;

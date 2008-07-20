@@ -4,8 +4,8 @@
 
 #include "filedecodejob.h"
 
-FileDecodeJob::FileDecodeJob(int pageNum, const QString &path, const QSize &boundingSize)
-    :DecodeJob(pageNum, path, boundingSize)
+FileDecodeJob::FileDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, bool highPriority)
+    :DecodeJob(pageNum, path, boundingSize, highPriority)
 {
 }
 
@@ -26,10 +26,10 @@ void FileDecodeJob::run()
         imageReader.setScaledSize(imageSize);
     }
 
-    kDebug()<<"Decoding "<<path()<<endl;
+    //kDebug()<<"Decoding "<<path()<<endl;
     time.start();
     setImage(imageReader.read());
-    kDebug()<<"Decoding finished: "<<time.elapsed()<<" ms"<<endl;
+    //kDebug()<<"Decoding finished: "<<time.elapsed()<<" ms"<<endl;
 }
 
 #include "filedecodejob.moc"

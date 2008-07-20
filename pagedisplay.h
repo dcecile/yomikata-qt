@@ -24,8 +24,12 @@ public slots:
 
     void setPageNumber(int pageNumA, int pageNumB, int totalPages);
 
+    void toggleZoom();
+
 private:
     void paintEvent(QPaintEvent *event);
+    void enterEvent(QEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
 
     void adjustLayout();
 
@@ -45,6 +49,13 @@ private:
 
     QLabel *_pageNumberLabel;
     QBasicTimer _pageNumberTimer;
+
+    QSize _displaySize;
+    bool _zoomEnabled;
+    bool _offsetUnset;
+    QPoint _offset;
+    bool _newMousePath;
+    QPoint _previousMousePosition;
 };
 
 #endif

@@ -16,7 +16,7 @@ class Yomikata : public KMainWindow
     Q_OBJECT
 
 public:
-    Yomikata(QWidget *parent=0);
+    Yomikata(const QString &initialArg, QWidget *parent=0);
 
 private slots:
     void open();

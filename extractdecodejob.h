@@ -13,7 +13,7 @@ class ExtractDecodeJob : public DecodeJob
     Q_OBJECT
 
 public:
-    ExtractDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, FileInfo::ArchiveType archiveType, const QString &archive);
+    ExtractDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, FileInfo::ArchiveType archiveType, const QString &archive, bool highPriority);
 
 private:
     void run();

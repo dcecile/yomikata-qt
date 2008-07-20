@@ -4,6 +4,7 @@
 #include <kio/job.h>
 #include <kio/jobclasses.h>
 #include <QStringList>
+#include <QTime>
 
 class FileLister : public QObject
 {
@@ -27,6 +28,8 @@ public:
 
     KIO::ListJob *_listJob;
     KUrl _currentDir;
+
+    QTime _listingTime;
 };
 
 #endif

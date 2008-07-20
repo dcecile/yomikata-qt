@@ -10,6 +10,7 @@ public:
             Tar,
             TarGz,
             TarBz,
+            TarZ,
             Zip,
             Rar,
             InvalidArchiveType

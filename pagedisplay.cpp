@@ -1,5 +1,6 @@
 #include <QPainter>
 #include <QPaintEvent>
+#include <QMouseEvent>
 #include <KDebug>
 
 #include "pagedisplay.h"
@@ -8,6 +9,8 @@ PageDisplay::PageDisplay(QWidget *parent)
     :QWidget(parent)
 {
     _mangaMode = true;
+    _zoomEnabled = false;
+    _displaySize = size();
 
     _pageNumberLabel = new QLabel(this);
     _pageNumberLabel->hide();
@@ -105,6 +108,31 @@ void PageDisplay::setPageNumber(int pageNumA, int pageNumB, int totalPages)
     setUpdatesEnabled(previousUpdateStatus);
 }
 
+void PageDisplay::toggleZoom()
+{
+    // Don't toggle the zoom if nothing's being displayed
+    if (_pixmap[0].isNull()) {
+        return;
+    }
+
+    _zoomEnabled = !_zoomEnabled;
+    setMouseTracking(_zoomEnabled);
+    _newMousePath = true;
+
+    if (_zoomEnabled) {
+        setCursor(Qt::BlankCursor);
+    } else {
+        setCursor(Qt::ArrowCursor);
+    }
+
+    adjustLayout();
+
+    update();
+
+    // Tell the loader that the display size is changing
+    emit displaySizeChanged(_displaySize);
+}
+
 void PageDisplay::paintEvent(QPaintEvent *event)
 {
     // Make sure we have something to paint
@@ -122,7 +150,7 @@ void PageDisplay::paintEvent(QPaintEvent *event)
         QPainter painter(this);
 
         if (_prescaled[i]) {
-            if (paintRect == _destRect[i]) {
+            if (paintRect == _destRect[i] && !_zoomEnabled) {
                 // Paint everything
                 painter.drawPixmap(_destRect[i].topLeft(), _pixmap[i]);
             } else {
@@ -135,7 +163,7 @@ void PageDisplay::paintEvent(QPaintEvent *event)
                 // Scale the pixmap up/down for the first time
                 _scaledPixmap[i] = _pixmap[i].scaled(_destRect[i].size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             }
-            if (paintRect == _destRect[i]) {
+            if (paintRect == _destRect[i] && !_zoomEnabled) {
                 // Paint everything
                 painter.drawPixmap(_destRect[i].topLeft(), _scaledPixmap[i]);
             } else {
@@ -156,7 +184,12 @@ void PageDisplay::adjustLayout()
 {
     Q_ASSERT(!_pixmap[0].isNull());
 
-    QSize totalSize = size();
+    // Reset the display size
+    if (_zoomEnabled) {
+        _displaySize = size() * 2;
+    } else {
+        _displaySize = size();
+    }
 
     if (_singlePage) {
         QSize imageSize = _pixmap[0].size();
@@ -164,18 +197,28 @@ void PageDisplay::adjustLayout()
         Q_ASSERT(imageSize.isValid());
 
         // Scale the page so it fits snug in the widget
-        imageSize.scale(totalSize, Qt::KeepAspectRatio);
+        imageSize.scale(_displaySize, Qt::KeepAspectRatio);
         _destRect[0].setSize(imageSize);
+
+        // If we're zooming, try to shrink the display "window" to the image
+        if (_zoomEnabled) {
+            if (imageSize.height() > height()) {
+                _displaySize.setHeight(imageSize.height());
+            }
+            if (imageSize.width() > width()) {
+                _displaySize.setWidth(imageSize.width());
+            }
+        }
 
         // Nice things happen when when the image is prescaled
         _prescaled[0] = imageSize == _pixmap[0].size();
 
         // Check which dimension has extra space and adjust the
         //  weights of the image and spacers accordingly
-        if (imageSize.height() == totalSize.height()) {
-            _destRect[0].moveTo((totalSize.width() - imageSize.width()) / 2, 0);
+        if (imageSize.height() == _displaySize.height()) {
+            _destRect[0].moveTo((_displaySize.width() - imageSize.width()) / 2, 0);
         } else {
-            _destRect[0].moveTo(0, (totalSize.height() - imageSize.height()) / 2);
+            _destRect[0].moveTo(0, (_displaySize.height() - imageSize.height()) / 2);
         }
 
         // The previous scaled pixmap isn't any use
@@ -186,7 +229,7 @@ void PageDisplay::adjustLayout()
 
         QSize imageSize[2] = {_pixmap[0].size(), _pixmap[1].size()};
 
-        kDebug()<<"Image sizes "<<imageSize[0]<<imageSize[1]<<endl;
+        //kDebug()<<"Image sizes "<<imageSize[0]<<imageSize[1]<<endl;
 
         Q_ASSERT(imageSize[0].isValid());
         Q_ASSERT(imageSize[1].isValid());
@@ -203,7 +246,7 @@ void PageDisplay::adjustLayout()
         QSize togetherSize(imageSize[0].width() + imageSize[1].width(), imageSize[0].height());
 
         // Scale the pages so they fit snug in the widget
-        togetherSize.scale(totalSize, Qt::KeepAspectRatio);
+        togetherSize.scale(_displaySize, Qt::KeepAspectRatio);
 
         _destRect[0].setWidth(int(
             qreal(togetherSize.width()) * (qreal(imageSize[0].width()) / qreal(imageSize[0].width() + imageSize[1].width()))
@@ -212,35 +255,66 @@ void PageDisplay::adjustLayout()
         _destRect[1].setWidth(togetherSize.width() - _destRect[0].width());
         _destRect[1].setHeight(togetherSize.height());
 
+        // If we're zooming, try to shrink the display "window" to the image
+        if (_zoomEnabled) {
+            if (togetherSize.height() > height()) {
+                _displaySize.setHeight(togetherSize.height());
+            }
+            if (togetherSize.width() > width()) {
+                _displaySize.setWidth(togetherSize.width());
+            }
+        }
+
         // Nice things happen when when the image is prescaled
         _prescaled[0] = _destRect[0].size() == _pixmap[0].size();
         _prescaled[1] = _destRect[1].size() == _pixmap[1].size();
 
         // Check which dimension has extra space and adjust the
         //  weights of the image and spacers accordingly
-        if (togetherSize.height() == totalSize.height()) {
-            _destRect[0].moveTo((totalSize.width() - togetherSize.width()) / 2, 0);
+        if (togetherSize.height() == _displaySize.height()) {
+            _destRect[0].moveTo((_displaySize.width() - togetherSize.width()) / 2, 0);
             _destRect[1].moveTo(_destRect[0].right() + 1, 0);
         } else {
-            _destRect[0].moveTo(0, (totalSize.height() - togetherSize.height()) / 2);
+            _destRect[0].moveTo(0, (_displaySize.height() - togetherSize.height()) / 2);
             _destRect[1].moveTo(_destRect[0].right() + 1, _destRect[0].top());
         }
 
-        kDebug()<<"Widget "<<size()<<", dest rects "<<_destRect[0]<<_destRect[1]<<endl;
+        //kDebug()<<"Widget "<<size()<<", dest rects "<<_destRect[0]<<_destRect[1]<<endl;
 
         // The previous scaled pixmaps aren't any use
         _scaledPixmap[0] = QPixmap();
         _scaledPixmap[1] = QPixmap();
     }
 
-    update();
+    if (_zoomEnabled) {
+        // Initialize the viewport position
+        if (_mangaMode) {
+            // Show the far right side of the images
+            _offset.setX(width() - _displaySize.width());
+            _offset.setY(0);
+        } else {
+            _offset.setX(0);
+            _offset.setY(0);
+        }
+
+        // Move the dest rects based on the current offset
+        _destRect[0].translate(_offset);
+        if (!_singlePage) {
+            _destRect[1].translate(_offset);
+        }
+
+        _newMousePath = true;
+
+        /*// Trim the dest rects to the size of the the widget
+        _destRect[0] &= rect();
+        if (!_singlePage) {
+            _destRect[1] &= rect();
+        }*/
+    }
 }
 
 void PageDisplay::resizeEvent(QResizeEvent *)
 {
-    // Tell the loader that the display size is changing
-    emit displaySizeChanged(size());
-
     // Don't move the label, just hide it
     if (_pageNumberLabel->isVisible()) {
         _pageNumberTimer.stop();
@@ -254,7 +328,62 @@ void PageDisplay::resizeEvent(QResizeEvent *)
         // Put the pages in the right places
         adjustLayout();
 
+        // Tell the loader that the display size is changing
+        emit displaySizeChanged(size());
+
         update();
+    } else {
+        // Tell the loader that the display size is changing
+        emit displaySizeChanged(size());
+    }
+}
+void PageDisplay::enterEvent(QEvent *)
+{
+    //kDebug()<<"Mouse entered widget"<<endl;
+    _newMousePath = true;
+}
+
+void PageDisplay::mouseMoveEvent (QMouseEvent * event)
+{
+    if (!_zoomEnabled) {
+        event->ignore();
+
+    } else if (_newMousePath) {
+        _newMousePath = false;
+        _previousMousePosition = event->pos();
+        //kDebug()<<"Mouse started path "<<event->pos()<<endl;
+
+    } else {
+        QPoint delta = _previousMousePosition - event->pos();
+        //kDebug()<<"Mouse moved "<<delta<<endl;
+
+        delta *= 2;
+
+        if (_offset.x() + delta.x() < width() - _displaySize.width()) {
+            delta.setX(width() - _displaySize.width() - _offset.x());
+        } else if (_offset.x() + delta.x() > 0) {
+            delta.setX(-_offset.x());
+        }
+        if (_offset.y() + delta.y() < height() - _displaySize.height()) {
+            delta.setY(height() - _displaySize.height() - _offset.y());
+        } else if (_offset.y() + delta.y() > 0) {
+            delta.setY(-_offset.y());
+        }
+
+        if (!delta.isNull()) {
+            _offset += delta;
+            //kDebug()<<"Delta capped at "<<delta<<endl;
+
+            // Move the dest rects based on the current offset
+            _destRect[0].translate(delta);
+            if (!_singlePage) {
+                _destRect[1].translate(delta);
+            }
+
+            update();
+        }
+
+        _previousMousePosition = event->pos();
     }
 }
 

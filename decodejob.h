@@ -10,8 +10,13 @@ class DecodeJob : public ThreadWeaver::Job
     Q_OBJECT
 
 public:
-    DecodeJob(int pageNum, const QString &path, const QSize &boundingSize);
+    DecodeJob(int pageNum, const QString &path, const QSize &boundingSize, bool highPriority);
     virtual ~DecodeJob();
+
+    int priority() const;
+    void resetPriority(bool highPriority);
+
+    void resetBoundingSize(const QSize &boundingSize);
 
     int pageNum() const;
     QImage &image();
@@ -29,6 +34,7 @@ private:
     QSize _boundingSize;
     QImage _image;
     QSize _fullImageSize;
+    bool _highPriority;
 };
 
 #endif

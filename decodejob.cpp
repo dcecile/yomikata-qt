@@ -2,14 +2,29 @@
 
 #include "decodejob.h"
 
-DecodeJob::DecodeJob(int pageNum, const QString &path, const QSize &boundingSize)
-    :_pageNum(pageNum), _path(path), _boundingSize(boundingSize)
+DecodeJob::DecodeJob(int pageNum, const QString &path, const QSize &boundingSize, bool highPriority)
+:_pageNum(pageNum), _path(path), _boundingSize(boundingSize), _highPriority(highPriority)
 {
 }
 
 DecodeJob::~DecodeJob()
 {
     //kDebug()<<"DecodeJob deconstructing"<<endl;
+}
+
+int DecodeJob::priority() const
+{
+    return _highPriority ?1 :0;
+}
+
+void DecodeJob::resetPriority(bool highPriority)
+{
+    _highPriority = highPriority;
+}
+
+void DecodeJob::resetBoundingSize(const QSize &boundingSize)
+{
+    _boundingSize = boundingSize;
 }
 
 int DecodeJob::pageNum() const

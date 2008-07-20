@@ -1,7 +1,6 @@
 #include <KDebug>
 
 #include "pageloader.h"
-#include "decodejob.h"
 #include "filedecodejob.h"
 #include "extractdecodejob.h"
 
@@ -65,6 +64,8 @@ void PageLoader::changePage()
         }
     }
 
+    kDebug()<<"Changing page "<<_targetPage[0]<<", "<<_targetPage[1]<<endl;
+
     bool pageNumberShown = false;
 
     // If the pages are loaded, show them
@@ -97,18 +98,18 @@ void PageLoader::changePage()
     }
 
     // If we're getting near the end of the buffer, fill it up
-    if (_bufferEnd - _targetPage[0] < BUFFER_SIZE) {
-        // Fill forward
-        for (int i = _bufferEnd + 1; i - _targetPage[0] <= BUFFER_SIZE && i < _pages.size(); i++) {
-            startReadingPage(i);
+    // Make sure that the buffer pages are decoded soon after this one
+    for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
+        if (_targetPage[0] + i < _numPages) {
+            startReadingPage(_targetPage[0] + i);
+        }
+        if (_targetPage[0] - i >= 0) {
+            startReadingPage(_targetPage[0] - i);
         }
     }
-    if (_targetPage[0] - _bufferStart < BUFFER_SIZE) {
-        // Fill backward
-        for (int i = _bufferStart - 1; _targetPage[0] - i <= BUFFER_SIZE && i >= 0; i--) {
-            startReadingPage(i);
-        }
-    }
+
+    // Let other jobs go before the previous ones
+    decodeBlockDone();
 }
 
 void PageLoader::navigateForward()
@@ -278,6 +279,7 @@ void PageLoader::updateEnabledActions()
 
 void PageLoader::setDisplaySize(const QSize &displaySize)
 {
+    //kDebug()<<"Display size "<<displaySize<<endl;
     if (_displaySize == displaySize) {
         return;
     }
@@ -338,7 +340,7 @@ bool PageLoader::isPageScaled(int pageNum)
     QSize boundedSize(_pages[pageNum].fullSize);
     boundedSize.scale(_displaySize, Qt::KeepAspectRatio);
 
-    kDebug()<<"Comparing image size "<<_pages[pageNum].pixmap.size()<<"to display size "<<_displaySize<<endl;
+    //kDebug()<<"Comparing image size "<<_pages[pageNum].pixmap.size()<<"to display size "<<_displaySize<<endl;
 
     return _pages[pageNum].pixmap.size() == boundedSize;
 }
@@ -353,6 +355,9 @@ void PageLoader::startZoomMode()
     if (_targetPage[1] != -1) {
         startReadingPage(_targetPage[1]);
     }
+
+    // Let other jobs go before the previous ones
+    decodeBlockDone();
 }
 
 void PageLoader::stopZoomMode()
@@ -363,6 +368,7 @@ void PageLoader::stopZoomMode()
     // Schedule the decoding of any unscaled pages
     _bufferStart = _targetPage[0];
     _bufferEnd = _targetPage[0];
+    startReadingPage(_targetPage[0]);
     for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
         if (_targetPage[0] + i < _numPages) {
             startReadingPage(_targetPage[0] + i);
@@ -371,52 +377,89 @@ void PageLoader::stopZoomMode()
             startReadingPage(_targetPage[0] - i);
         }
     }
+
+    // Let other jobs go before the previous ones
+    decodeBlockDone();
 }
 
 
-void PageLoader::startReadingPage(int pageNum)
+void PageLoader::startReadingPage(int pageNum, bool highPriority)
 {
     Q_ASSERT(pageNum < _pages.size());
     //Q_ASSERT(_pages[pageNum].pixmap.isNull());
 
-    if (!_pages[pageNum].isLoading) {
-        kDebug()<<"Queueing page "<<pageNum<<" decode, display size "<<_displaySize<<endl;
+    // If we're in zoom mode, decode an unscaled version of the page
+    if (_zoomMode) {
+        enqueuePage(pageNum, highPriority);
+        // The buffer will have to be reaccessed after the zoom mode is finished
 
-        // If we're in zoom mode, decode an unscaled version of the page
-        if (_zoomMode) {
-            _pages[pageNum].isLoading = true;
-            _pages[pageNum].loadingTime.restart();
+    } else {
+        if (_pages[pageNum].pixmap.isNull() || !isPageScaled(pageNum)) {
+            // Only reload the page if its the wrong size
+            enqueuePage(pageNum, highPriority);
+        }
 
-            // Note: if we're just resizing the window, maybe we don't need to scale from the image's
-            //  full resolution. Then again, scaling from the full resolution will give the highest
-            //  qualitity results
-            if (_archiveMode) {
-                _decodeWeaver.enqueue(new ExtractDecodeJob(pageNum, _pages[pageNum].path, QSize(), _archiveType, _archivePath));
-            } else {
-                _decodeWeaver.enqueue(new FileDecodeJob(pageNum, _pages[pageNum].path, QSize()));
-            }
-            // The buffer will have to be reaccessed after the zoom mode is finished
-
-        } else {
-            if (_pages[pageNum].pixmap.isNull() || !isPageScaled(pageNum)) {
-                // Only reload the page if its the wrong size
-                _pages[pageNum].isLoading = true;
-                _pages[pageNum].loadingTime.restart();
-                if (_archiveMode) {
-                    _decodeWeaver.enqueue(new ExtractDecodeJob(pageNum, _pages[pageNum].path, _displaySize, _archiveType, _archivePath));
-                } else {
-                    _decodeWeaver.enqueue(new FileDecodeJob(pageNum, _pages[pageNum].path, _displaySize));
-                }
-            }
-
-            if (pageNum < _bufferStart) {
-                _bufferStart = pageNum;
-            }
-            if (pageNum > _bufferEnd) {
-                _bufferEnd = pageNum;
-            }
+        if (pageNum < _bufferStart) {
+            _bufferStart = pageNum;
+        }
+        if (pageNum > _bufferEnd) {
+            _bufferEnd = pageNum;
         }
     }
+}
+
+void PageLoader::enqueuePage(int pageNum, bool highPriority)
+{
+    const QSize &size = _zoomMode ?QSize() :_displaySize;
+    // Note: if we're just resizing the window, maybe we don't need to scale from the image's
+    //  full resolution. Then again, scaling from the full resolution will give the highest
+    //  qualitity results
+
+    DecodeJob *job;
+
+    if (!_pages[pageNum].isLoading) {
+        // This decode isn't queued or running, create a new job
+        _pages[pageNum].isLoading = true;
+
+        if (_archiveMode) {
+            job = new ExtractDecodeJob(pageNum, _pages[pageNum].path, size, _archiveType, _archivePath, highPriority);
+        } else {
+            job = new FileDecodeJob(pageNum, _pages[pageNum].path, size, highPriority);
+        }
+        _pages[pageNum].job = job;
+
+    } else {
+        // This decode is queued or running
+        job = _pages[pageNum].job;
+        Q_ASSERT(job != 0);
+
+        bool dequeued = _decodeWeaver.dequeue(job);
+        if (!dequeued) {
+            // The job is already running, abort starting it again
+            return;
+        }
+        // If it's queued, move it up in the queue, giving it new parameters
+        job->resetBoundingSize(size);
+        job->resetPriority(highPriority);
+    }
+
+    // Start tracking how long it takes to decode the page
+    _pages[pageNum].loadingTime.restart();
+
+    // Keep track of this job so its priority can be reset later
+    _decodeBlock.push_back(job);
+
+    kDebug()<<"Queueing page "<<pageNum<<" decode, "<<size<<endl;
+
+    _decodeWeaver.enqueue(job);
+}
+
+void PageLoader::decodeBlockDone()
+{
+    for (QList<DecodeJob *>::iterator i = _decodeBlock.begin(); i != _decodeBlock.end(); i++) {
+        (*i)->resetPriority(false);
+    }
+    _decodeBlock.clear();
 }
 
 void PageLoader::decodeDone(ThreadWeaver::Job *job)
@@ -426,11 +469,14 @@ void PageLoader::decodeDone(ThreadWeaver::Job *job)
     Q_ASSERT(decodeJob != 0);
 
     int pageNum = decodeJob->pageNum();
+    Q_ASSERT(_pages[pageNum].job == decodeJob);
 
     // Check that the decode suceeded
     if (decodeJob->image().isNull()) {
         // Make sure the job's QImage is freed
         delete decodeJob;
+        _pages[pageNum].isLoading = false;
+        _pages[pageNum].job = 0;
         emit pageReadFailed(pageNum);
         return;
     }
@@ -438,15 +484,16 @@ void PageLoader::decodeDone(ThreadWeaver::Job *job)
     QTime time;
     time.start();
     _pages[pageNum].pixmap = QPixmap::fromImage(decodeJob->image());
-    kDebug()<<"QImage to QPixmap conversion: "<<time.elapsed()<<" ms"<<endl;
+    //kDebug()<<"QImage to QPixmap conversion: "<<time.elapsed()<<" ms"<<endl;
 
-    kDebug()<<"Time elapsed (page "<<pageNum<<"): "<<_pages[pageNum].loadingTime.elapsed()<<" ms"<<endl;
+    kDebug()<<"Page "<<pageNum<<" decoded: "<<_pages[pageNum].loadingTime.elapsed()<<" ms - "<<_pages[pageNum].pixmap.size()<<endl;
 
     _pages[pageNum].fullSize = decodeJob->fullImageSize();
     _pages[pageNum].isLoading = false;
 
     // Make sure the job's QImage is freed
     delete decodeJob;
+    _pages[pageNum].job = 0;
 
     // Check that the image to pixmap conversion suceeded
     if (_pages[pageNum].pixmap.isNull()) {
@@ -461,38 +508,34 @@ void PageLoader::decodeDone(ThreadWeaver::Job *job)
         }
     } else {
         // If two pages are being displayed, display them both at once
-
         // If one of the pages is wide, only show the primary page
-        if (isPageWide(_targetPage[0]) || isPageWide(_targetPage[1])) {
-            _targetPage[0] = _targetPage[_primaryPage];
-            _targetPage[1] = -1;
-        }
+        for (int i=0; i<2; i++) {
+            if (pageNum == _targetPage[i]) {
+                if (isPageWide(pageNum)) {
+                    //kDebug()<<"Page "<<pageNum<<", target 0 wide"<<endl;
+                    _targetPage[0] = _targetPage[_primaryPage];
+                    _targetPage[1] = -1;
 
-        if (pageNum == _targetPage[0]) {
-            if (isPageWide(pageNum)) {
-                kDebug()<<"Page "<<pageNum<<", target 0 wide"<<endl;
-                _targetPage[0] = _targetPage[_primaryPage];
-                _targetPage[1] = -1;
-
-                if (pageNum == _targetPage[0] || !_pages[_targetPage[0]].pixmap.isNull()) {
-                    emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
+                    if (pageNum == _targetPage[0] || !_pages[_targetPage[0]].pixmap.isNull()) {
+                        emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
+                    }
+                    updateEnabledActions();
+                } else if (!_pages[_targetPage[!i]].pixmap.isNull()) {
+                    emit showTwoPages(_pages[_targetPage[0]].pixmap, _pages[_targetPage[1]].pixmap, _targetPage[0], _targetPage[1], _numPages);
+                } else {
+                    //kDebug()<<"Can't display "<<pageNum<<endl;
                 }
-            } else if (!_pages[_targetPage[1]].pixmap.isNull()) {
-                emit showTwoPages(_pages[pageNum].pixmap, _pages[_targetPage[1]].pixmap, _targetPage[0], _targetPage[1], _numPages);
-            }
-        } else if (pageNum == _targetPage[1]) {
-            if (isPageWide(pageNum)) {
-                kDebug()<<"Page "<<pageNum<<", target 1 wide"<<endl;
-                _targetPage[0] = _targetPage[_primaryPage];
-                _targetPage[1] = -1;
-
-                if (pageNum == _targetPage[0] || !_pages[_targetPage[0]].pixmap.isNull()) {
-                    emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
-                }
-            } else if (!_pages[_targetPage[0]].pixmap.isNull()) {
-                emit showTwoPages(_pages[_targetPage[0]].pixmap, _pages[pageNum].pixmap, _targetPage[0], _targetPage[1], _numPages);
+                break;
             }
         }
+    }
+
+    // If the page was decoded at the wrong size, decode it over
+    if ((pageNum == _targetPage[0] || pageNum == _targetPage[1]) &&
+            ((_zoomMode && _pages[pageNum].pixmap.size() != _pages[pageNum].fullSize) ||
+             (!_zoomMode && !isPageScaled(pageNum)))) {
+        startReadingPage(pageNum);
+        decodeBlockDone();
     }
 }
 
@@ -529,6 +572,7 @@ void PageLoader::listingDone(int initialPosition, const QStringList &files)
     // Start reading pages
     _bufferStart = initialPosition;
     _bufferEnd = initialPosition;
+    startReadingPage(initialPosition);
     for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
         if (initialPosition + i < _numPages) {
             startReadingPage(initialPosition + i);
@@ -537,6 +581,9 @@ void PageLoader::listingDone(int initialPosition, const QStringList &files)
             startReadingPage(initialPosition - i);
         }
     }
+
+    // Let other jobs go before the previous ones
+    decodeBlockDone();
 }
 
 

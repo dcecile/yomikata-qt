@@ -12,7 +12,7 @@ class FileDecodeJob : public DecodeJob
     Q_OBJECT
 
 public:
-    FileDecodeJob(int pageNum, const QString &path, const QSize &boundingSize);
+    FileDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, bool highPriority);
 
 private:
     void run();

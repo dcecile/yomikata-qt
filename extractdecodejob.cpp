@@ -5,8 +5,8 @@
 
 #include "extractdecodejob.h"
 
-ExtractDecodeJob::ExtractDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, FileInfo::ArchiveType archiveType, const QString &archive)
-    :DecodeJob(pageNum, path, boundingSize), _archiveType(archiveType), _archive(archive)
+ExtractDecodeJob::ExtractDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, FileInfo::ArchiveType archiveType, const QString &archive, bool highPriority)
+    :DecodeJob(pageNum, path, boundingSize, highPriority), _archiveType(archiveType), _archive(archive)
 {
 }
 
@@ -16,13 +16,29 @@ void ExtractDecodeJob::run()
 
     QProcess extracter;
 
-    kDebug()<<"Extracting and decoding "<<path()<<endl;
+    //kDebug()<<"Extracting and decoding "<<path()<<endl;
     time.start();
 
     QString command;
     QStringList args;
 
     switch (_archiveType) {
+    case FileInfo::Tar:
+        command = "tar";
+        args<<"-xOf";
+        break;
+    case FileInfo::TarGz:
+        command = "tar";
+        args<<"-zxOf";
+        break;
+    case FileInfo::TarBz:
+        command = "tar";
+        args<<"--bzip2"<<"-xOf";
+        break;
+    case FileInfo::TarZ:
+        command = "tar";
+        args<<"-ZxOf";
+        break;
     case FileInfo::Zip:
         command = "unzip";
         args<<"-p";
@@ -61,7 +77,7 @@ void ExtractDecodeJob::run()
         setImage(image().scaled(boundingSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
 
-    kDebug()<<"Extracting and decoding finished: "<<time.elapsed()<<" ms"<<endl;
+    //kDebug()<<"Extracting and decoding finished: "<<time.elapsed()<<" ms"<<endl;
 }
 
 #include "extractdecodejob.moc"

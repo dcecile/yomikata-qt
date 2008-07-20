@@ -14,6 +14,7 @@
 #include <KMenuBar>
 #include <KToolBar>
 #include <KToggleFullScreenAction>
+#include <QDir>
 
 #include "yomikata.h"
 #include "fileinfo.h"
@@ -26,42 +27,48 @@
  * Done: Fullscreen mode
  * Done: Read archives
  * Done: Display two pages
- * @TODO: Open other archive formats
+ * Done: Open other archive formats
+ * Done: Preempt the other queued jobs with the current page using QueuePolicy
+ * Done: Open with commandline-parameters
+ * @TODO: Zoom tool (free roaming, scroll to zoom)
  * @TODO: Open more than once
- * @TODO: Preempt the other queued jobs with the current page using QueuePolicy
  * @TODO: Buttons at ends of archives to jump to next ones
  * @TODO: Memory use awareness (check out pixmap cache)
  * @TODO: Hide mouse after idle time
- * @TODO: Zoom tool (free roaming, scroll to zoom)
  * @TODO: Correctly calculate double-page size for portait window
- * @TODO: Thumbnails
- * @TODO: Give a good colour to the spacer panels
  * @TODO: Open image in external editor
- * @TODO: Open with commandline-parameters
- * @TODO: Copy non-local file when given url
- * @TODO: Use mimetype filters for file open dialog
  * @TODO: All navigation shortcuts
  * @TODO: Viewing modes (single, left-right, right-left)
- * @TODO: Status bar for buffer fullness
- * @TODO: Status bar error messages
+ * @TODO: Unobtrusive error messages
  * @TODO: Show plain text info files
  * @TODO: During resizing, pull out of zoom mode if the size doesn't change for a while
  * @TODO: Allow rotated output
  * @TODO: Fullscreen mode w/o menubar
- * @TODO: Handle erroraneous input
+ * @TODO: Handle erroraneous input (bad files) (bad setup)
  * @TODO: Bookmarks, maybe autoopen at previous position
- * @TODO: Session management
+ * @TODO: Session management awareness
+ * @TODO: Cull the queue when there's way too many entries
+ * @TODO: When stopping zoom, stop irrelevant decode jobs
+ * @TODO: Let archive get dropped to open
+ * @TODO: Detect when unzip is using filenames from Shift-JIS
+ * @TODO: Maybe switch to loading cursor when loading
+ * _maybe_: Copy non-local file when given url
+ * _maybe_: Use mimetype filters for file open dialog
+ * _maybe_: Status bar for buffer fullness
+ * _maybe_: Thumbnails
+ * _maybe_: Give a good colour to the spacer panels
+ * _maybe_: Drop pages onto a folder, etc. to save them
  * _maybe_: Optimize archive retrival (stdout)
- * _maybe: Optimize archive retrival (pipeline)
+ * _maybe_: Optimize archive retrival (pipeline)
  * _mabye_: Status bar for page # / total
- * _maybe_ use zlib
- * _maybe_ use kioslaves
- * _maybe_ option to convert an archive
- * _maybe_ recursive openning
- * _maybe_ draw pixmaps on QGLWidget
+ * _maybe_: Use zlib
+ * _maybe_: Use kioslaves
+ * _maybe_: Option to convert an archive
+ * _maybe_: Recursive openning
+ * _maybe_: Draw pixmaps on QGLWidget
  */
 
-Yomikata::Yomikata(QWidget *parent)
+Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
     :KMainWindow(parent)
 {
     // Set initial state
@@ -98,6 +105,19 @@ Yomikata::Yomikata(QWidget *parent)
     connect(_pageDisplay, SIGNAL(displaySizeChanged(const QSize &)), &_pageLoader, SLOT(setDisplaySize(const QSize &)));
 
     _pageLoader.setDisplaySize(_pageDisplay->size());
+
+    if (!initialArg.isEmpty()) {
+        // Open the file right away
+        if (QDir::isRelativePath(initialArg)) {
+            _pageLoader.initialize(QDir::current().absoluteFilePath(initialArg));
+        } else {
+            _pageLoader.initialize(initialArg);
+        }
+        kDebug()<<"Page loader initialized"<<endl;
+
+        // Reflect the open file's name in the title bar
+        setCaption(initialArg);
+    }
 }
 
 void Yomikata::open()
@@ -148,6 +168,10 @@ void Yomikata::mousePressEvent(QMouseEvent *event)
     // Middle mouse triggers paging forward one page
     if (event->button() == Qt::MidButton && _pageForwardAction->isEnabled()) {
         _pageLoader.navigateForwardOnePage();
+    }
+
+    if (event->button() == Qt::RightButton) {
+        _pageDisplay->toggleZoom();
     }
 }
 
@@ -206,14 +230,14 @@ void Yomikata::createActions()
     _pageForwardAction = actionCollection()->addAction( "page_forward" );
     _pageForwardAction->setText(i18n("Page &Forward"));
     connect(_pageForwardAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateForward()));
-    _pageForwardAction->setShortcut(Qt::Key_Space);
+    _pageForwardAction->setShortcuts(QList<QKeySequence>()<<Qt::Key_Space<<Qt::Key_PageDown);
     addAction(_pageForwardAction);
 
     // Page backward
     _pageBackwardAction = actionCollection()->addAction( "page_backward" );
     _pageBackwardAction->setText(i18n("Page Backward"));
     connect(_pageBackwardAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateBackward()));
-    _pageBackwardAction->setShortcut(Qt::Key_Backspace);
+    _pageBackwardAction->setShortcuts(QList<QKeySequence>()<<Qt::Key_Backspace<<Qt::Key_PageUp);
     addAction(_pageBackwardAction);
 
     // Page left

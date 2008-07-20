@@ -16,11 +16,16 @@ void FileLister::list(const QString &initialFile)
     // Clear the list
     _fileList.clear();
 
+    // Start the timer
+    _listingTime.restart();
+
     // Remember the first image
     _initialFile = initialFile;
 
     // Start listing the directory
     // Find the directory of the initial file
+    KUrl test = KUrl::fromPath(initialFile);
+    kDebug()<<"KUrl "<<test.url()<<endl;
     _currentDir = KUrl::fromPath(initialFile).directory();
 
     Q_ASSERT(!_currentDir.isEmpty());
@@ -68,7 +73,7 @@ void FileLister::finished(KJob *job)
 {
     Q_ASSERT(job == _listJob);
 
-    kDebug()<<"File listing finished"<<endl;
+    kDebug()<<"Listing finished: "<<_listingTime.elapsed()<<" ms"<<endl;
 
     if (_listJob->error()) {
         // There was an error getting the directory listing
@@ -93,6 +98,8 @@ void FileLister::finished(KJob *job)
         // The listing is done
         emit listBuilt(initialPosition, _fileList);
     }
+
+    _listJob = 0;
 
     /*
     // Start listing the parent directory
