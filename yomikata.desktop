@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=yomikata
+Exec=yomikata %U
+Type=Application
+GenericName=Comics Reader
+Terminal=false
+Icon=yomikata
+MimeType=application/x-rar;application/x-zip
+X-KDE-StartupNotify=true
+X-DBUS-StartupType=Multi
+Categories=Qt;KDE;
