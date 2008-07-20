@@ -11,7 +11,7 @@ enum FileType {
 class FileTypes
 {
 public:
-    static FileType determineType(const KUrl& url);
+    static FileType determineType(const QString& filename);
 };
 
 #endif

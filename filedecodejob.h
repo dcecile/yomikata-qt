@@ -1,29 +1,21 @@
 #ifndef FILEDECODEJOB_H
 #define FILEDECODEJOB_H
 
-#include <QPixmap>
-#include <QImageReader>
-#include <QIODevice>
+#include <QImage>
 #include <KUrl>
 #include <threadweaver/Job.h>
 
-class FileDecodeJob : public ThreadWeaver::Job
+#include "decodejob.h"
+
+class FileDecodeJob : public DecodeJob
 {
     Q_OBJECT
 
 public:
-    FileDecodeJob(int pageNum, KUrl path);
-
-    int pageNum() const;
-    QPixmap pixmap();
+    FileDecodeJob(int pageNum, const QString &path, const QSize &boundingSize);
 
 private:
     void run();
-
-private:
-    int _pageNum;
-    KUrl _path;
-    QPixmap _pixmap;
 };
 
 #endif

@@ -1,25 +1,35 @@
 #include <KDebug>
+#include <QTime>
+#include <QImageReader>
 
 #include "filedecodejob.h"
 
-FileDecodeJob::FileDecodeJob(int pageNum, KUrl path)
-    :_pageNum(pageNum), _path(path)
+FileDecodeJob::FileDecodeJob(int pageNum, const QString &path, const QSize &boundingSize)
+    :DecodeJob(pageNum, path, boundingSize)
 {
 }
 
-int FileDecodeJob::pageNum() const
-{
-    return _pageNum;
-}
-QPixmap FileDecodeJob::pixmap()
-{
-    return _pixmap;
-}
 void FileDecodeJob::run()
 {
-    kDebug()<<"Decode job executing"<<endl
-        <<"Local file of "<<_path.url()<<" is "<<_path.toLocalFile()<<endl;
-    _pixmap = QPixmap(_path.toLocalFile());
+    QTime time;
+
+    QImageReader imageReader(path());
+
+    setFullImageSize(imageReader.size());
+    Q_ASSERT(fullImageSize().isValid());
+
+    if (boundingSize().isValid()) {
+        QSize imageSize(fullImageSize());
+
+        // Scale the image down
+        imageSize.scale(boundingSize(), Qt::KeepAspectRatio);
+        imageReader.setScaledSize(imageSize);
+    }
+
+    kDebug()<<"Decoding "<<path()<<endl;
+    time.start();
+    setImage(imageReader.read());
+    kDebug()<<"Decoding finished: "<<time.elapsed()<<" ms"<<endl;
 }
 
 #include "filedecodejob.moc"

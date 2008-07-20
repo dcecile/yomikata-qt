@@ -3,10 +3,18 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
                           http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
-  <!--MenuBar>
-    <Menu name="file" >
-      <text>&amp;File</text>
-      <Action name="clear" />
+  <ToolBar name="mainToolBar" ><text>Main Toolbar</text>
+    <Action name="file_open" />
+    <Separator/>
+    <Action name="page_left" />
+    <Action name="page_right" />
+    <Separator/>
+    <Action name="fullscreen" />
+  </ToolBar>
+  <MenuBar>
+    <Menu name="navigate" ><text>&amp;Navigate</text>
+      <Action name="page_left" />
+      <Action name="page_right" />
     </Menu>
-  </MenuBar-->
+  </MenuBar>
 </kcfg>

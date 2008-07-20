@@ -1,11 +1,11 @@
 #include "filetypes.h"
 
-FileType FileTypes::determineType(const KUrl& url)
+FileType FileTypes::determineType(const QString& filename)
 {
-    QString string = url.url();
-
-    if (string.endsWith(".jpg")) {
+    if (filename.endsWith(".jpg")) {
         return Image;
+    } else if (filename.endsWith(".rar")) {
+        return Archive;
     } else {
         return Invalid;
     }
