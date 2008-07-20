@@ -1,4 +1,3 @@
-
 #include "yomikata.h"
 
 #include <KApplication>
@@ -23,13 +22,13 @@
 #include "fileclassifier.h"
 
 Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
-    :KXmlGuiWindow(parent), _oyabun(this)
+    :KXmlGuiWindow(parent), _source(this), _book(this), _projector(this), _steward(this, book, projector)
 {
     PageMode pageMode = (PageMode)Settings::viewMode();
     Q_ASSERT(pageMode == SingleMode || pageMode == ComicsMode || pageMode == MangaMode);
 
     // Create the widget for displaying the pages
-    setCentralWidget(_oyabun.getDepicter());
+    setCentralWidget(_projector);
 
     // Set up the actions (open, quit, etc.)
     createActions();
@@ -52,8 +51,8 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
     enableZoomOut(false);
 
     // Connect to forward/backward status
-    connect(&_oyabun, SIGNAL(forwardEnabled(bool)), this, SLOT(enableForward(bool)));
-    connect(&_oyabun, SIGNAL(backwardEnabled(bool)), this, SLOT(enableBackward(bool)));
+    connect(&_book, SIGNAL(forwardEnabled(bool)), this, SLOT(enableForward(bool)));
+    connect(&_book, SIGNAL(backwardEnabled(bool)), this, SLOT(enableBackward(bool)));
 
     /*
     // Connect to zoom status
@@ -62,12 +61,19 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
     connect(&_pageDisplay, SIGNAL(zoomOutEnabled(bool)), this, SLOT(enableZoomOut(bool)));
     */
 
+    // Create the worker threads
+    const int NUM_WORKER_THEADS = 1;
+    for (int i = 0; i < NUM_WORKER_THEADS; i++) {
+        _artifcers.push_back(Artificer(this, _source, _steward));
+        _artifcers.back().start();
+    }
+
     if (!initialArg.isEmpty()) {
         // Open the file right away
         if (QDir::isRelativePath(initialArg)) {
-            _oyabun.start(QDir::current().absoluteFilePath(initialArg));
+            setSource(QDir::current().absoluteFilePath(initialArg));
         } else {
-            _oyabun.start(initialArg);
+            setSource(initialArg);
         }
         kDebug()<<"Page loader initialized";
 
@@ -94,10 +100,16 @@ void Yomikata::open()
         return;
     }
 
-    _oyabun.start(filename);
+    setSource(filename);
 
     // Reflect the open file's name in the title bar
     setCaption(filename);
+}
+
+void Yomikata::setSource(const QString &initialFile)
+{
+    _source.set(initialFile);
+    _book.open(_source);
 }
 
 void Yomikata::wheelEvent(QWheelEvent *event)
@@ -122,11 +134,11 @@ void Yomikata::wheelEvent(QWheelEvent *event)
     } else {
         if (event->delta() > 0 && _pageBackwardAction->isEnabled()) {
             // Page back
-            _oyabun.turnPageBackward();
+            _book.turnPageBackward();
 
         } else if (event->delta() < 0 && _pageForwardAction->isEnabled()) {
             // Page forward
-            _oyabun.turnPageForward();
+            _book.turnPageForward();
 
         } else {
             // Can't page
@@ -139,7 +151,7 @@ void Yomikata::mousePressEvent(QMouseEvent *event)
 {
     // Middle mouse triggers paging forward one page
     if (event->button() == Qt::MidButton && _pageForwardAction->isEnabled()) {
-        _oyabun.turnPageForwardOnePage();
+        _book.turnPageForwardOnePage();
     }
 
     if (event->button() == Qt::RightButton && _zoomToggleAction->isEnabled()) {
@@ -229,14 +241,14 @@ void Yomikata::createActions()
     // Page forward
     _pageForwardAction = actionCollection()->addAction( "page_forward" );
     _pageForwardAction->setText(i18n("Page &Forward"));
-    connect(_pageForwardAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageForward()));
+    connect(_pageForwardAction, SIGNAL(triggered(bool)), &_book, SLOT(turnPageForward()));
     _pageForwardAction->setShortcuts(QList<QKeySequence>()<<Qt::Key_Space<<Qt::Key_PageDown);
     addAction(_pageForwardAction);
 
     // Page backward
     _pageBackwardAction = actionCollection()->addAction( "page_backward" );
     _pageBackwardAction->setText(i18n("Page Backward"));
-    connect(_pageBackwardAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageBackward()));
+    connect(_pageBackwardAction, SIGNAL(triggered(bool)), &_book, SLOT(turnPageBackward()));
     _pageBackwardAction->setShortcuts(QList<QKeySequence>()<<Qt::Key_Backspace<<Qt::Key_PageUp);
     addAction(_pageBackwardAction);
 
@@ -244,28 +256,28 @@ void Yomikata::createActions()
     _pageLeftAction = new KAction(KIcon("go-previous"),  i18n("Page &Left"), this);
     _pageLeftAction->setShortcut(Qt::Key_Left);
     _pageLeftAction->setObjectName("page_left");
-    connect(_pageLeftAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageForward()));
+    connect(_pageLeftAction, SIGNAL(triggered(bool)), &_book, SLOT(turnPageForward()));
     actionCollection()->addAction(_pageLeftAction->objectName(), _pageLeftAction);
 
     // Page right
     _pageRightAction = new KAction(KIcon("go-next"),  i18n("Page &Right"), this);
     _pageRightAction->setShortcut(Qt::Key_Right);
     _pageRightAction->setObjectName("page_right");
-    connect(_pageRightAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageBackward()));
+    connect(_pageRightAction, SIGNAL(triggered(bool)), &_book, SLOT(turnPageBackward()));
     actionCollection()->addAction(_pageRightAction->objectName(), _pageRightAction);
 
     // Page to start
     _pageToStartAction = new KAction(KIcon("go-top"),  i18n("Go to &Start"), this);
     _pageToStartAction->setShortcut(Qt::Key_Home);
     _pageToStartAction->setObjectName("page_to_start");
-    connect(_pageToStartAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageToStart()));
+    connect(_pageToStartAction, SIGNAL(triggered(bool)), &_book, SLOT(turnPageToStart()));
     actionCollection()->addAction(_pageToStartAction->objectName(), _pageToStartAction);
 
     // Page to end
     _pageToEndAction = new KAction(KIcon("go-bottom"),  i18n("Go to &End"), this);
     _pageToEndAction->setShortcut(Qt::Key_End);
     _pageToEndAction->setObjectName("page_to_end");
-    connect(_pageToEndAction, SIGNAL(triggered(bool)), &_oyabun, SLOT(turnPageToEnd()));
+    connect(_pageToEndAction, SIGNAL(triggered(bool)), &_book, SLOT(turnPageToEnd()));
     actionCollection()->addAction(_pageToEndAction->objectName(), _pageToEndAction);
 
     // Toggle zoom

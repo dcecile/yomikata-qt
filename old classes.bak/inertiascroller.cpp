@@ -61,7 +61,7 @@ void InertiaScroller::mouseMoved(const QPoint &distance)
 //void InertiaScroller::timerEvent(QTimerEvent *)
 void InertiaScroller::timeout()
 {
-    // Double check that there's no pending evnets
+    // HACK: Double check that there's no pending evnets
     if (QCoreApplication::hasPendingEvents()) {
         kDebug()<<"Timer aborting"<<endl;
         // Wait before triggering again

@@ -19,7 +19,7 @@ class ArchiveLister : public Lister
 public:
     ArchiveLister(FileClassifier::ArchiveType archiveType, const QString &archivePath, QObject *parent);
 
-    void list();
+    void beginListing();
 
     ~ArchiveLister();
 

@@ -20,7 +20,7 @@ ArchiveLister::~ArchiveLister()
 {
 }
 
-void ArchiveLister::list()
+void ArchiveLister::beginListing()
 {
     Q_ASSERT(_process.state() == QProcess::NotRunning);
 
@@ -287,7 +287,7 @@ void ArchiveLister::finished(int exitCode, QProcess::ExitStatus exitStatus)
 
     // Note: pages might not be in a good order, depending on the decompressor's
     //  "sorting" logic
-    emit doneListing(_fileList, _fileSizes, 0);
+    finishListing(_fileList, _fileSizes, 0);
 }
 
 void ArchiveLister::cleanZipFilenames()
@@ -320,7 +320,5 @@ void ArchiveLister::cleanZipFilenames()
         //Q_ASSERT(false);
     }
 }
-
-
 
 #include "archivelister.moc"

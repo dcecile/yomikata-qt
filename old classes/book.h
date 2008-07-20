@@ -7,13 +7,8 @@
 #include <vector>
 
 #include "fileinfo.h"
-#include "pageconductor.h"
-#include "planner.h"
-#include "cache.h"
 
 using std::vector;
-
-class Page;
 
 class Book : public QObject
 {
@@ -23,39 +18,62 @@ public:
     Book(QObject *parent);
     ~Book();
 
-    void open(const vector<FileInfo> &files);
+    void open(const Source &source);
 
-    Page *getPageOne();
-    Page *getPageTwo();
+    int getPageOne() const;
+    int getPageTwo() const;
 
-    Page *getPageToPrecache();
+    QString getFilename(int pageNumber) const;
+    int getFilesize(int pageNumber) const;
+    QSize getImageSize(int pageNumber) const;
+    int getPairedPage(int pageNumber) const;
 
+    void setPageDouble(int pageNumber);
+    void setPageNotDouble(int pageNumber);
+
+public slots:
     void turnPageForward();
     void turnPageBackward();
     void turnPageForwardOnePage();
     void turnPageToStart();
     void turnPageToEnd();
 
-    bool atStart();
-    bool atEnd();
-
-public slots:
-    void resetDisplayArea(const QSize &area);
-
 signals:
-    void currentPagesReset();
-    void currentPagesReplanned();
+    void forwardEnabled(bool enabled);
+    void backwardEnabled(bool enabled);
+    void pageTurned();
+    void pagePairsChanged(int lowerPageNumber, int upperPageNumber);
 
 private:
     void finishTurningPage();
 
+private slots:
+    void doneListing(const vector<FileInfo> &files);
+
 private:
-    PageConductor _pageConductor;
-    Planner _planner;
-    Cache _cache;
+    bool _twoPageMode;
+
+    Lister *_lister;
 
     int _numPages;
-    vector<Page*> _pages;
+    int _primaryPage;
+    int _targetPage[2];
+
+    bool _forwardEnabled;
+    bool _backwardEnabled;
+
+    struct Page {
+        Page(const FileInfo &file)
+            : filesize(file.size), prefDouble(-1), nextDouble(-1), filename(file.name) {}
+
+        int filesize;
+        int prevDouble;
+        int nextDouble;
+        QString filename;
+        QSize imageSize;
+    };
+
+    vector<Page> _pages;
 };
 
 #endif

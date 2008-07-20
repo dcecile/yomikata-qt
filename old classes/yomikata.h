@@ -10,7 +10,14 @@
 #include <KSelectAction>
 #include <QBasicTimer>
 
-#include "oyabun.h"
+#include <vector>
+
+#include "source.h"
+#include "book.h"
+#include "steward.h"
+#include "artificer.h"
+
+using std::vector;
 
 /**
  * @defgroup mod_userinterface User Interface module
@@ -49,6 +56,8 @@ private slots:
     void setMangaView();
 
 private:
+    void setSource(const QString &initialFile);
+
     void startListing(const QString &initialFile);
 
     void wheelEvent(QWheelEvent *event);
@@ -62,8 +71,12 @@ private:
     // Current state
     enum PageMode {SingleMode=0, ComicsMode, MangaMode};
 
-    // Oyabun
-    Oyabun _oyabun;
+    // Object set
+    Source _source;
+    Book _book;
+    Projector _projector;
+    Steward _steward;
+    vector<Artificer> _artifcers;
 
     // Actions
     QAction *_pageForwardAction;

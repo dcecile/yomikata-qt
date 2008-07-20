@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "fileinfo.h"
+
 using std::vector;
 
 /**
@@ -20,12 +22,15 @@ protected:
     Lister(QObject *parent);
 
 public:
-    virtual void list() = 0;
+    virtual void beginListing() = 0;
 
     virtual ~Lister();
 
+protected:
+    void finishListing(const QStringList &files, const vector<int> &fileSizes, QString startPageName);
+
 signals:
-    void doneListing(QStringList files, vector<int> fileSizes, QString startPageName);
+    void doneListing(const vector<FileInfo> &files);
 };
 
 #endif

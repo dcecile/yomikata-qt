@@ -50,9 +50,6 @@ private:
     Cache &_cache;
 
     int _pageNumber;
-    QString _filename;
-    int _filesize;
-
     QPixmap _thumbnail;
 };
 
