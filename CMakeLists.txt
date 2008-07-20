@@ -8,10 +8,13 @@ set(yomikata_SRCS
   yomikata.cpp
   pagedisplay.cpp
   pageloader.cpp
-  filetypes.cpp
+  fileinfo.cpp
   decodejob.cpp
   filedecodejob.cpp
   extractdecodejob.cpp
+  lister.cpp
+  filelister.cpp
+  extractlister.cpp
 )
 
 kde4_automoc(${yomikata_SRCS})

@@ -5,8 +5,8 @@
 
 #include "extractdecodejob.h"
 
-ExtractDecodeJob::ExtractDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, const QString &archive)
-    :DecodeJob(pageNum, path, boundingSize), _archive(archive)
+ExtractDecodeJob::ExtractDecodeJob(int pageNum, const QString &path, const QSize &boundingSize, FileInfo::ArchiveType archiveType, const QString &archive)
+    :DecodeJob(pageNum, path, boundingSize), _archiveType(archiveType), _archive(archive)
 {
 }
 
@@ -19,8 +19,25 @@ void ExtractDecodeJob::run()
     kDebug()<<"Extracting and decoding "<<path()<<endl;
     time.start();
 
-    extracter.start("unrar", QStringList()<<"p"<<"-ierr"<<_archive<<path());
-    // Note: With "-ierr", the header info is put into stderr (and ignored here)
+    QString command;
+    QStringList args;
+
+    switch (_archiveType) {
+    case FileInfo::Zip:
+        command = "unzip";
+        args<<"-p";
+        break;
+    case FileInfo::Rar:
+        command = "unrar";
+        args<<"p"<<"-ierr";
+        // Note: With "-ierr", the header info is put into stderr (and ignored here)
+        break;
+    default:
+        Q_ASSERT(false);
+    }
+    args<<_archive<<path();
+
+    extracter.start(command, args);
 
     // Wait for the extracter to finish
     // Note: QImageReader won't decode the whole image unless the whole

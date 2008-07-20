@@ -11,6 +11,7 @@ class DecodeJob : public ThreadWeaver::Job
 
 public:
     DecodeJob(int pageNum, const QString &path, const QSize &boundingSize);
+    virtual ~DecodeJob();
 
     int pageNum() const;
     QImage &image();

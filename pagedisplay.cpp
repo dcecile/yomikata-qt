@@ -7,12 +7,26 @@
 PageDisplay::PageDisplay(QWidget *parent)
     :QWidget(parent)
 {
+    _mangaMode = true;
+
+    _pageNumberLabel = new QLabel(this);
+    _pageNumberLabel->hide();
+    _pageNumberLabel->setBackgroundRole(QPalette::Window);
+    _pageNumberLabel->setAutoFillBackground(true);
+    _pageNumberLabel->setAlignment(Qt::AlignCenter);
 }
 
-void PageDisplay::setOnePage(const QPixmap &pixmap)
+void PageDisplay::setMangaMode(bool enabled)
+{
+    _mangaMode = enabled;
+}
+
+void PageDisplay::setOnePage(const QPixmap &pixmap, int pageNum, int totalPages)
 {
     // Make sure no painting gets done while the pages are changing
+    int previousUpdateStatus = updatesEnabled();
     setUpdatesEnabled(false);
+
     // There is a new pixmap to display
     _pixmap[0] = pixmap;
     _scaledPixmap[0] = QPixmap();
@@ -22,25 +36,73 @@ void PageDisplay::setOnePage(const QPixmap &pixmap)
     // Position everything correctly
     adjustLayout();
 
-    setUpdatesEnabled(true);
+    // Make sure the page number is shown
+    setPageNumber(pageNum, -1, totalPages);
+
+    // Restart the timer to hide the page number
+    const int PAGE_NUMBER_HIDE_DELAY = 1500;
+    _pageNumberTimer.stop();
+    _pageNumberTimer.start(PAGE_NUMBER_HIDE_DELAY, this);
+
+    setUpdatesEnabled(previousUpdateStatus);
 }
 
-void PageDisplay::setTwoPages(const QPixmap &pixmapA, const QPixmap &pixmapB)
+void PageDisplay::setTwoPages(const QPixmap &pixmapA, const QPixmap &pixmapB, int pageNumA, int pageNumB, int totalPages)
 {
     // Make sure no painting gets done while the pages are changing
+    int previousUpdateStatus = updatesEnabled();
     setUpdatesEnabled(false);
 
     // There are new pixmaps to display
-    _pixmap[0] = pixmapA;
+    if (_mangaMode) {
+        _pixmap[1] = pixmapA;
+        _pixmap[0] = pixmapB;
+    } else {
+        _pixmap[0] = pixmapA;
+        _pixmap[1] = pixmapB;
+    }
     _scaledPixmap[0] = QPixmap();
-    _pixmap[1] = pixmapB;
     _scaledPixmap[1] = QPixmap();
     _singlePage = false;
 
     // Position everything correctly
     adjustLayout();
 
-    setUpdatesEnabled(true);
+    // Make sure the page number is shown
+    setPageNumber(pageNumA, pageNumB, totalPages);
+
+    // Restart the timer to hide the page number
+    const int PAGE_NUMBER_HIDE_DELAY = 1500;
+    _pageNumberTimer.stop();
+    _pageNumberTimer.start(PAGE_NUMBER_HIDE_DELAY, this);
+
+    setUpdatesEnabled(previousUpdateStatus);
+}
+
+void PageDisplay::setPageNumber(int pageNumA, int pageNumB, int totalPages)
+{
+    int previousUpdateStatus = updatesEnabled();
+    setUpdatesEnabled(false);
+
+    // Stop the timer to hide the page number
+    _pageNumberTimer.stop();
+
+    // Show the page number
+    const int WIDTH_PADDING = 20;
+    QString text;
+    if (pageNumB == -1) {
+        text = QString("%1 / %2").arg(QString::number(pageNumA + 1), QString::number(totalPages));
+    } else {
+        text = QString("%1-%2 / %3").arg(QString::number(pageNumA + 1), QString::number(pageNumB + 1), QString::number(totalPages));
+    }
+    QFontMetrics metrics(_pageNumberLabel->font());
+    _pageNumberLabel->resize(metrics.width(text) + WIDTH_PADDING, _pageNumberLabel->height());
+    _pageNumberLabel->setText(text);
+    _pageNumberLabel->move(width() - _pageNumberLabel->width(), height() - _pageNumberLabel->height());
+    _pageNumberLabel->raise();
+    _pageNumberLabel->show();
+
+    setUpdatesEnabled(previousUpdateStatus);
 }
 
 void PageDisplay::paintEvent(QPaintEvent *event)
@@ -135,7 +197,6 @@ void PageDisplay::adjustLayout()
         } else if (imageSize[1].height() > imageSize[0].height()) {
             imageSize[0].scale(0x7FFFFFFF, imageSize[1].height(), Qt::KeepAspectRatio);
         }
-        kDebug()<<"Image sizes "<<imageSize[0]<<imageSize[1]<<endl;
         Q_ASSERT(imageSize[0].height() == imageSize[1].height());
 
         // Calculate the total size
@@ -165,7 +226,7 @@ void PageDisplay::adjustLayout()
             _destRect[1].moveTo(_destRect[0].right() + 1, _destRect[0].top());
         }
 
-        kDebug()<<"Dest rects "<<_destRect[0]<<_destRect[1]<<endl;
+        kDebug()<<"Widget "<<size()<<", dest rects "<<_destRect[0]<<_destRect[1]<<endl;
 
         // The previous scaled pixmaps aren't any use
         _scaledPixmap[0] = QPixmap();
@@ -175,15 +236,35 @@ void PageDisplay::adjustLayout()
     update();
 }
 
-void PageDisplay::resizeEvent(QResizeEvent */*event*/)
+void PageDisplay::resizeEvent(QResizeEvent *)
 {
+    // Tell the loader that the display size is changing
+    emit displaySizeChanged(size());
+
+    // Don't move the label, just hide it
+    if (_pageNumberLabel->isVisible()) {
+        _pageNumberTimer.stop();
+
+        _pageNumberLabel->hide();
+    }
+
     // If there are pages being displayed, position them correctly
     if (!_pixmap[0].isNull()) {
+
         // Put the pages in the right places
         adjustLayout();
 
         update();
     }
+}
+
+void PageDisplay::timerEvent(QTimerEvent *event)
+{
+    Q_ASSERT(event->timerId() == _pageNumberTimer.timerId());
+
+    // Hide the page number
+    _pageNumberTimer.stop();
+    _pageNumberLabel->hide();
 }
 
 #include "pagedisplay.moc"

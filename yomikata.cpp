@@ -16,6 +16,7 @@
 #include <KToggleFullScreenAction>
 
 #include "yomikata.h"
+#include "fileinfo.h"
 
 /**
  * Done: Read files in a directory
@@ -24,7 +25,7 @@
  * Done: Status of page # / total
  * Done: Fullscreen mode
  * Done: Read archives
- * @TODO: Display two pages
+ * Done: Display two pages
  * @TODO: Open other archive formats
  * @TODO: Open more than once
  * @TODO: Preempt the other queued jobs with the current page using QueuePolicy
@@ -32,6 +33,7 @@
  * @TODO: Memory use awareness (check out pixmap cache)
  * @TODO: Hide mouse after idle time
  * @TODO: Zoom tool (free roaming, scroll to zoom)
+ * @TODO: Correctly calculate double-page size for portait window
  * @TODO: Thumbnails
  * @TODO: Give a good colour to the spacer panels
  * @TODO: Open image in external editor
@@ -47,6 +49,8 @@
  * @TODO: Allow rotated output
  * @TODO: Fullscreen mode w/o menubar
  * @TODO: Handle erroraneous input
+ * @TODO: Bookmarks, maybe autoopen at previous position
+ * @TODO: Session management
  * _maybe_: Optimize archive retrival (stdout)
  * _maybe: Optimize archive retrival (pipeline)
  * _mabye_: Status bar for page # / total
@@ -61,8 +65,6 @@ Yomikata::Yomikata(QWidget *parent)
     :KMainWindow(parent)
 {
     // Set initial state
-    _numPages = 0;
-    _targetPage = -1;
     _pageMode = MangaMode;
     //_pageMode = SingleMode;
 
@@ -80,46 +82,22 @@ Yomikata::Yomikata(QWidget *parent)
     setupGUI();
 
     // Set the actions into the correct state
-    synchronizeActions();
+    enableForward(_pageLoader.isForwardEnabled());
+    enableBackward(_pageLoader.isBackwardEnabled());
 
     // Connect to the page loader
-    connect(&_pageLoader, SIGNAL(pagesListed(int, int)), this, SLOT(pagesListed(int, int)), Qt::QueuedConnection);
-    connect(&_pageLoader, SIGNAL(pageRead(int)), this, SLOT(pageRead(int)), Qt::QueuedConnection);
-    connect(&_pageLoader, SIGNAL(pageReadFailed(int)), this, SLOT(pageReadFailed(int)), Qt::QueuedConnection);
+    connect(&_pageLoader, SIGNAL(pageReadFailed(int)), this, SLOT(pageReadFailed(int)));
+
+    connect(&_pageLoader, SIGNAL(forwardEnabled(bool)), this, SLOT(enableForward(bool)));
+    connect(&_pageLoader, SIGNAL(backwardEnabled(bool)), this, SLOT(enableBackward(bool)));
+
+    connect(&_pageLoader, SIGNAL(showOnePage(const QPixmap &, int, int)), _pageDisplay, SLOT(setOnePage(const QPixmap &, int, int)));
+    connect(&_pageLoader, SIGNAL(showTwoPages(const QPixmap &, const QPixmap &, int, int, int)), _pageDisplay, SLOT(setTwoPages(const QPixmap &, const QPixmap &, int, int, int)));
+    connect(&_pageLoader, SIGNAL(showPageNumber(int, int, int)), _pageDisplay, SLOT(setPageNumber(int, int, int)));
+
+    connect(_pageDisplay, SIGNAL(displaySizeChanged(const QSize &)), &_pageLoader, SLOT(setDisplaySize(const QSize &)));
 
     _pageLoader.setDisplaySize(_pageDisplay->size());
-
-    _pageNumberLabel = 0;
-}
-
-void Yomikata::resizeEvent(QResizeEvent *)
-{
-    // Check that we have something open
-    if (_targetPage != -1) {
-        // Notify the page loader about the new display size
-        _pageLoader.setDisplaySize(_pageDisplay->size());
-
-        // By resizing, the zoom mode is activated
-        // If we are starting zoom mode right now, get an unscaled version of
-        //  the pages being displayed
-        if (!_pageLoader.isZoomMode()) {
-            _pageLoader.startZoomMode();
-
-            // Get the correct size of pixmap
-            _pageLoader.startReadingPage(_targetPage);
-            if (_pageMode != SingleMode && _targetPageB != -1) {
-                _pageLoader.startReadingPage(_targetPageB);
-            }
-        }
-    }
-
-    if (_pageNumberLabel != 0) {
-        // Don't move the label, just destroy it
-        _pageNumberTimer.stop();
-
-        delete _pageNumberLabel;
-        _pageNumberLabel = 0;
-    }
 }
 
 void Yomikata::open()
@@ -127,12 +105,7 @@ void Yomikata::open()
     // Get an existing file from the user
     QString filename = KFileDialog::getOpenFileName(
         KUrl(),
-        QString(
-        "*.jpg *.rar|All Supported Files\n"
-        "*.jpg|Image Files\n"
-        "*.rar|Archive Files\n"
-        //"*|All Files"
-        ),
+        FileInfo::getFileDialogWildcardString(),
         this,
         QString());
 
@@ -141,11 +114,6 @@ void Yomikata::open()
         return;
     }
 
-    _numPages = 0;
-    _targetPage = -1;
-    _targetPageB = -1;
-    synchronizeActions();
-
     _pageLoader.initialize(filename);
     kDebug()<<"Page loader initialized"<<endl;
 
@@ -153,210 +121,47 @@ void Yomikata::open()
     setCaption(filename);
 }
 
-void Yomikata::pagesListed(int initialPosition, int numPages)
-{
-    kDebug()<<"Pages listed: initial position "<<initialPosition<<", total pages "<<numPages<<endl;
-
-    _numPages = numPages;
-    _targetPage = initialPosition;
-    if (_pageMode != SingleMode && _targetPage + 1 < _numPages) {
-        _targetPageB = initialPosition + 1;
-    }
-
-    changePage();
-
-    synchronizeActions();
-}
-
-void Yomikata::pageRead(int pageNum)
-{
-    kDebug()<<"Page "<<pageNum<<" read"<<endl;
-
-    if (_targetPageB == -1) {
-        if (pageNum == _targetPage) {
-            _pageDisplay->setOnePage(_pageLoader.getPage(_targetPage));
-        }
-    } else {
-        if ((pageNum == _targetPage && _pageLoader.isPageRead(_targetPageB))
-            || (pageNum == _targetPageB && _pageLoader.isPageRead(_targetPage))) {
-            _pageDisplay->setTwoPages(_pageLoader.getPage(_targetPageB), _pageLoader.getPage(_targetPage));
-        }
-    }
-}
-
 void Yomikata::pageReadFailed(int pageNum)
 {
     kDebug()<<"Page "<<pageNum<<" failed reading"<<endl;
 
-    //KMessageBox::error(this, i18n("Cannot load the image:\n%1.").arg(filename));
     KMessageBox::error(this, i18n("Cannot load the image."));
-}
-
-void Yomikata::changePage()
-{
-    kDebug()<<"_targetPage "<<_targetPage<<", _targetPageB "<<_targetPageB<<endl;
-
-    // Changing the page stops zoom mode
-    if (_pageLoader.isZoomMode()) {
-        _pageLoader.stopZoomMode(_targetPage);
-    }
-
-    if (_pageMode == SingleMode || _targetPageB == -1) {
-        if (_pageLoader.isPageRead(_targetPage)) {
-            // If there's something decoded, display it
-            _pageDisplay->setOnePage(_pageLoader.getPage(_targetPage));
-
-            if (!_pageLoader.isPageScaled(_targetPage)) {
-                // If the decoded page isn't the right size, schedule the decoding of a
-                //  correctly sized page
-                kDebug()<<"Wrong size page loaded"<<endl;
-                _pageLoader.startReadingPage(_targetPage);
-            }
-        } else {
-            _pageLoader.startReadingPage(_targetPage);
-        }
-    } else {
-        bool pageRead = _pageLoader.isPageRead(_targetPage);
-        bool pageReadB = _pageLoader.isPageRead(_targetPageB);
-
-        if (pageRead && pageReadB) {
-            _pageDisplay->setTwoPages(_pageLoader.getPage(_targetPageB), _pageLoader.getPage(_targetPage));
-
-            if (!_pageLoader.isPageScaled(_targetPage)) {
-                // If the decoded page isn't the right size, schedule the decoding of a
-                //  correctly sized page
-                kDebug()<<"Wrong size page loaded"<<endl;
-                _pageLoader.startReadingPage(_targetPage);
-            }
-            if (!_pageLoader.isPageScaled(_targetPageB)) {
-                // If the decoded page isn't the right size, schedule the decoding of a
-                //  correctly sized page
-                kDebug()<<"Wrong size page loaded"<<endl;
-                _pageLoader.startReadingPage(_targetPageB);
-            }
-        } else {
-            if (!pageRead) {
-                _pageLoader.startReadingPage(_targetPage);
-            }
-            if (!pageReadB) {
-                _pageLoader.startReadingPage(_targetPageB);
-            }
-        }
-    }
-
-    synchronizeActions();
-
-    // Start the timer to hide the page number
-    // Restart the timer if it had been started
-    if (_pageNumberTimer.isActive()) {
-        _pageNumberTimer.stop();
-    }
-    const int PAGE_NUMBER_HIDE_DELAY = 1500;
-    _pageNumberTimer.start(PAGE_NUMBER_HIDE_DELAY, this);
-
-    // Show the page number
-    if (_pageNumberLabel == 0) {
-        _pageNumberLabel = new QLabel(_pageDisplay);
-        _pageNumberLabel->hide();
-        _pageNumberLabel->setBackgroundRole(QPalette::Window);
-        _pageNumberLabel->setAutoFillBackground(true);
-        _pageNumberLabel->setAlignment(Qt::AlignCenter);
-    }
-
-    _pageNumberLabel->setUpdatesEnabled(false);
-    const int WIDTH_PADDING = 20;
-    QString text;
-    if (_targetPageB == -1) {
-        text = QString("%1 / %2").arg(QString::number(_targetPage + 1), QString::number(_numPages));
-    } else {
-        text = QString("%1-%2 / %3").arg(QString::number(_targetPage + 1), QString::number(_targetPageB + 1), QString::number(_numPages));
-    }
-    QFontMetrics metrics(_pageNumberLabel->font());
-    _pageNumberLabel->resize(metrics.width(text) + WIDTH_PADDING, _pageNumberLabel->height());
-    _pageNumberLabel->setText(text);
-    _pageNumberLabel->move(_pageDisplay->width() - _pageNumberLabel->width(), _pageDisplay->height() - _pageNumberLabel->height());
-    _pageNumberLabel->show();
-    _pageNumberLabel->raise();
-    _pageNumberLabel->setUpdatesEnabled(true);
-}
-
-void Yomikata::timerEvent(QTimerEvent *event)
-{
-    Q_ASSERT(event->timerId() == _pageNumberTimer.timerId());
-    Q_ASSERT(_pageNumberLabel != 0);
-
-    _pageNumberTimer.stop();
-
-    delete _pageNumberLabel;
-    _pageNumberLabel = 0;
 }
 
 void Yomikata::wheelEvent(QWheelEvent *event)
 {
     // Note: allows scrolling on menubar, similar to most other KDE apps
-    if (event->delta() > 0 && _pageRightAction->isEnabled()) {
+    if (event->delta() > 0 && _pageBackwardAction->isEnabled()) {
         // Page back
-        pageRight();
-    } else if (event->delta() < 0 && _pageLeftAction->isEnabled()) {
+        _pageLoader.navigateBackward();
+    } else if (event->delta() < 0 && _pageForwardAction->isEnabled()) {
         // Page forward
-        pageLeft();
+        _pageLoader.navigateForward();
     } else {
         // Can't page
         event->ignore();
     }
 }
 
-void Yomikata::pageLeft()
+void Yomikata::mousePressEvent(QMouseEvent *event)
 {
-    kDebug()<<"Paging left"<<endl;
-
-    if (_targetPageB == -1) {
-        _targetPage++;
-    } else {
-        _targetPage += 2;
+    // Middle mouse triggers paging forward one page
+    if (event->button() == Qt::MidButton && _pageForwardAction->isEnabled()) {
+        _pageLoader.navigateForwardOnePage();
     }
-
-    if (_pageMode != SingleMode && _targetPage + 1 < _numPages) {
-        _targetPageB = _targetPage + 1;
-    } else {
-        _targetPageB = -1;
-    }
-
-    changePage();
 }
 
-void Yomikata::pageRight()
+void Yomikata::enableForward(bool enabled)
 {
-    kDebug()<<"Paging right"<<endl;
-
-    if (_pageMode == SingleMode) {
-        _targetPage--;
-    } else {
-        if (_targetPage - 2 < 0) {
-            _targetPage--;
-            _targetPageB = -1;
-        } else {
-            _targetPage -= 2;
-            _targetPageB = _targetPage + 1;
-        }
-    }
-
-    changePage();
+    _pageForwardAction->setEnabled(enabled);
+    _pageToEndAction->setEnabled(enabled);
+    _pageLeftAction->setEnabled(enabled);
 }
-
-void Yomikata::synchronizeActions()
+void Yomikata::enableBackward(bool enabled)
 {
-    if (_numPages == 0) {
-        _pageLeftAction->setEnabled(false);
-        _pageRightAction->setEnabled(false);
-    } else {
-        _pageRightAction->setEnabled(_targetPage > 0);
-        if (_targetPageB == -1) {
-            _pageLeftAction->setEnabled(_targetPage < _numPages - 1);
-        } else {
-            _pageLeftAction->setEnabled(_targetPageB < _numPages - 1);
-        }
-    }
+    _pageBackwardAction->setEnabled(enabled);
+    _pageToStartAction->setEnabled(enabled);
+    _pageRightAction->setEnabled(enabled);
 }
 
 void Yomikata::toggleFullScreen(bool checked)
@@ -397,19 +202,47 @@ void Yomikata::createActions()
     // Show menubar
     KStandardAction::showMenubar(this, SLOT(toggleMenubar(bool)), actionCollection());
 
+    // Page forward
+    _pageForwardAction = actionCollection()->addAction( "page_forward" );
+    _pageForwardAction->setText(i18n("Page &Forward"));
+    connect(_pageForwardAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateForward()));
+    _pageForwardAction->setShortcut(Qt::Key_Space);
+    addAction(_pageForwardAction);
+
+    // Page backward
+    _pageBackwardAction = actionCollection()->addAction( "page_backward" );
+    _pageBackwardAction->setText(i18n("Page Backward"));
+    connect(_pageBackwardAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateBackward()));
+    _pageBackwardAction->setShortcut(Qt::Key_Backspace);
+    addAction(_pageBackwardAction);
+
     // Page left
     _pageLeftAction = new KAction(KIcon("previous"),  i18n("Page &Left"), this);
     _pageLeftAction->setShortcut(Qt::Key_Left);
     _pageLeftAction->setObjectName("page_left");
-    connect(_pageLeftAction, SIGNAL(triggered(bool)), SLOT(pageLeft()));
+    connect(_pageLeftAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateForward()));
     actionCollection()->addAction(_pageLeftAction->objectName(), _pageLeftAction);
 
     // Page right
     _pageRightAction = new KAction(KIcon("next"),  i18n("Page &Right"), this);
     _pageRightAction->setShortcut(Qt::Key_Right);
     _pageRightAction->setObjectName("page_right");
-    connect(_pageRightAction, SIGNAL(triggered(bool)), SLOT(pageRight()));
+    connect(_pageRightAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateBackward()));
     actionCollection()->addAction(_pageRightAction->objectName(), _pageRightAction);
+
+    // Page to start
+    _pageToStartAction = new KAction(KIcon("top"),  i18n("Go to &Start"), this);
+    _pageToStartAction->setShortcut(Qt::Key_Home);
+    _pageToStartAction->setObjectName("page_to_start");
+    connect(_pageToStartAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateToStart()));
+    actionCollection()->addAction(_pageToStartAction->objectName(), _pageToStartAction);
+
+    // Page to end
+    _pageToEndAction = new KAction(KIcon("bottom"),  i18n("Go to &End"), this);
+    _pageToEndAction->setShortcut(Qt::Key_End);
+    _pageToEndAction->setObjectName("page_to_end");
+    connect(_pageToEndAction, SIGNAL(triggered(bool)), &_pageLoader, SLOT(navigateToEnd()));
+    actionCollection()->addAction(_pageToEndAction->objectName(), _pageToEndAction);
 }
 
 void Yomikata::setAppDefaults()

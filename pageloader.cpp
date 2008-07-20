@@ -1,16 +1,11 @@
-#include <kio/jobclasses.h>
-#include <kio/scheduler.h>
-#include <kio/jobuidelegate.h>
 #include <KDebug>
-#include <QDir>
 
 #include "pageloader.h"
-#include "filetypes.h"
 #include "decodejob.h"
 #include "filedecodejob.h"
 #include "extractdecodejob.h"
 
-const int PageLoader::BUFFER_SIZE = 20;
+const int PageLoader::BUFFER_SIZE = 12;
 
 PageLoader::PageLoader()
 {
@@ -19,32 +14,296 @@ PageLoader::PageLoader()
     connect(&_decodeWeaver, SIGNAL(jobDone(Job *)),
             this, SLOT(decodeDone(Job *)));
 
-    // Set up the decompressor process
-    connect(&_extracterProcess, SIGNAL(readyReadStandardOutput()),
-            this, SLOT(extracterOutputText()));
-    connect(&_extracterProcess, SIGNAL(readyReadStandardError()),
-            this, SLOT(extracterErrorText()));
-    connect(&_extracterProcess, SIGNAL(error(QProcess::ProcessError)),
-            this, SLOT(extracterError(QProcess::ProcessError)));
-    connect(&_extracterProcess, SIGNAL(finished(int, QProcess::ExitStatus)),
-            this, SLOT(extracterFinished(int, QProcess::ExitStatus)));
+    // Connect to the listers
+    connect(&_fileLister, SIGNAL(listBuilt(int, const QStringList &)),
+            this, SLOT(listingDone(int, const QStringList &)));
+    connect(&_extractLister, SIGNAL(listBuilt(int, const QStringList &)),
+            this, SLOT(listingDone(int, const QStringList &)));
 
     // Start in a neutral state
     _bufferStart = -1;
     _bufferEnd = -1;
 
     _zoomMode = false;
+
+    _twoPageMode = true;
+
+    _targetPage[0] = -1;
+    _targetPage[1] = -1;
+    _numPages = 0;
+    updateEnabledActions();
+}
+
+bool PageLoader::isPageWide(int pageNum)
+{
+    Q_ASSERT(pageNum < _numPages);
+
+    if (_pages[pageNum].fullSize.isValid()) {
+        // See if the page is wider than a square
+        return qreal(_pages[pageNum].fullSize.width()) / qreal(_pages[pageNum].fullSize.height()) >= 1.0;
+    } else {
+        // Give the page the benefit of the doubt
+        return false;
+    }
+}
+
+void PageLoader::changePage()
+{
+    // Change the page to the current target page(s)
+
+    // A page change means that zoom mode is inactive
+    if (_zoomMode) {
+        stopZoomMode();
+    }
+
+    if (_targetPage[1] != -1) {
+        // If one of the pages is wide, only show the primary page
+        if (isPageWide(_targetPage[0]) || isPageWide(_targetPage[1])) {
+            kDebug()<<"Page "<<_targetPage[0]<<" or page "<<_targetPage[1]<<" is wide"<<endl;
+            _targetPage[0] = _targetPage[_primaryPage];
+            _targetPage[1] = -1;
+        }
+    }
+
+    bool pageNumberShown = false;
+
+    // If the pages are loaded, show them
+    if (!_twoPageMode || _targetPage[1] == -1) {
+        if (!_pages[_targetPage[0]].pixmap.isNull()) {
+            emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
+            pageNumberShown = true;
+        }
+    } else {
+        if (!_pages[_targetPage[0]].pixmap.isNull() && !_pages[_targetPage[1]].pixmap.isNull()) {
+            emit showTwoPages(_pages[_targetPage[0]].pixmap, _pages[_targetPage[1]].pixmap, _targetPage[0], _targetPage[1], _numPages);
+            pageNumberShown = true;
+        }
+    }
+
+    // If a page isn't loaded or is the wrong size, decode it
+    if (_pages[_targetPage[0]].pixmap.isNull() || !isPageScaled(_targetPage[0])) {
+        startReadingPage(_targetPage[0]);
+    }
+    if (_targetPage[1] != -1 && (_pages[_targetPage[1]].pixmap.isNull() || !isPageScaled(_targetPage[1]))) {
+        startReadingPage(_targetPage[1]);
+    }
+
+    // Make sure the actions are in synch
+    updateEnabledActions();
+
+    if (!pageNumberShown) {
+        // Show the page number
+        emit showPageNumber(_targetPage[0], _targetPage[1], _numPages);
+    }
+
+    // If we're getting near the end of the buffer, fill it up
+    if (_bufferEnd - _targetPage[0] < BUFFER_SIZE) {
+        // Fill forward
+        for (int i = _bufferEnd + 1; i - _targetPage[0] <= BUFFER_SIZE && i < _pages.size(); i++) {
+            startReadingPage(i);
+        }
+    }
+    if (_targetPage[0] - _bufferStart < BUFFER_SIZE) {
+        // Fill backward
+        for (int i = _bufferStart - 1; _targetPage[0] - i <= BUFFER_SIZE && i >= 0; i--) {
+            startReadingPage(i);
+        }
+    }
+}
+
+void PageLoader::navigateForward()
+{
+    Q_ASSERT(_forwardEnabled);
+
+    // Choose new target pages
+    if (_twoPageMode) {
+        if (_targetPage[1] != -1) {
+            _targetPage[0] += 2;
+        } else {
+            _targetPage[0]++;
+        }
+
+        if (_targetPage[0] + 1 < _numPages) {
+            _targetPage[1] = _targetPage[0] + 1;
+            _primaryPage = 0;
+        } else {
+            _targetPage[1] = -1;
+        }
+
+    } else {
+        _targetPage[0]++;
+    }
+
+    // Change the page
+    changePage();
+}
+
+void PageLoader::navigateBackward()
+{
+    Q_ASSERT(_backwardEnabled);
+
+    // Choose new target pages
+    if (_twoPageMode) {
+        if (_targetPage[0] - 2 < 0) {
+            _targetPage[0]--;
+            _targetPage[1] = -1;
+
+        } else {
+            _targetPage[0] -= 2;
+            _targetPage[1] = _targetPage[0] + 1;
+            _primaryPage = 1;
+        }
+
+    } else {
+        _targetPage[0]--;
+    }
+
+    // Change the page
+    changePage();
+}
+
+void PageLoader::navigateForwardOnePage()
+{
+    Q_ASSERT(_forwardEnabled);
+
+    // Choose new target pages
+    if (_twoPageMode) {
+        _targetPage[0]++;
+
+        if (_targetPage[0] + 1 < _numPages) {
+            _targetPage[1] = _targetPage[0] + 1;
+            _primaryPage = 0;
+        } else {
+            _targetPage[1] = -1;
+        }
+
+    } else {
+        _targetPage[0]++;
+    }
+
+    // Change the page
+    changePage();
+}
+
+void PageLoader::navigateToStart()
+{
+    Q_ASSERT(_backwardEnabled);
+
+    // Choose new target pages
+    if (_twoPageMode) {
+        _targetPage[0] = 0;
+
+        if (_numPages > 1) {
+            _targetPage[1] = 1;
+            _primaryPage = 0;
+        } else {
+            _targetPage[1] = -1;
+        }
+
+    } else {
+        _targetPage[0] = 0;
+    }
+
+    // Reset the buffer
+    _bufferStart = _targetPage[0];
+    _bufferEnd = _targetPage[0];
+
+    // Change the page
+    changePage();
+}
+
+void PageLoader::navigateToEnd()
+{
+    Q_ASSERT(_forwardEnabled);
+
+    // Choose new target pages
+    if (_twoPageMode) {
+        if (_numPages > 1) {
+            _targetPage[1] = _numPages - 1;
+            _targetPage[0] = _numPages - 2;
+            _primaryPage = 1;
+
+        } else {
+            _targetPage[0] = 0;
+            _targetPage[1] = -1;
+        }
+
+    } else {
+        _targetPage[0]++;
+    }
+
+    // Reset the buffer
+    _bufferStart = _targetPage[0];
+    _bufferEnd = _targetPage[0];
+
+    // Change the page
+    changePage();
+}
+
+bool PageLoader::isForwardEnabled() const
+{
+    return _forwardEnabled;
+}
+bool PageLoader::isBackwardEnabled() const
+{
+    return _backwardEnabled;
+}
+
+void PageLoader::updateEnabledActions()
+{
+    bool oldForward = _forwardEnabled;
+    bool oldBackward = _backwardEnabled;
+
+    // See if there's room to navigate forwards or backwards
+    if (_numPages == 0) {
+        _forwardEnabled = false;
+        _backwardEnabled = false;
+    } else {
+        _backwardEnabled = _targetPage[0] > 0;
+        if (_targetPage[1] == -1) {
+            _forwardEnabled = _targetPage[0] + 1 < _numPages;
+        } else {
+            _forwardEnabled = _targetPage[1] + 1 < _numPages;
+        }
+    }
+
+    // Emit the signals only of the state changed
+    if (_forwardEnabled != oldForward) {
+        emit forwardEnabled(_forwardEnabled);
+    }
+    if (_backwardEnabled != oldBackward) {
+        emit backwardEnabled(_backwardEnabled);
+    }
 }
 
 void PageLoader::setDisplaySize(const QSize &displaySize)
 {
+    if (_displaySize == displaySize) {
+        return;
+    }
     _displaySize = displaySize;
+
+    if (_numPages > 0) {
+        // A resize means that zoom mode is active
+        if (!_zoomMode) {
+            startZoomMode();
+        }
+    }
+}
+
+void PageLoader::setTwoPageMode(bool enabled)
+{
+    _twoPageMode = enabled;
 }
 
 void PageLoader::initialize(const QString &initialFile)
 {
     // Clear everything before starting any jobs
     _pages.clear();
+    _targetPage[0] = -1;
+    _targetPage[1] = -1;
+    _numPages = 0;
+    updateEnabledActions();
 
     // Zoom mode doesn't start activated
     _zoomMode = false;
@@ -52,78 +311,27 @@ void PageLoader::initialize(const QString &initialFile)
     KUrl path = KUrl::fromPath(initialFile);
 
     // Check if we're opening plain files or an archive
-    FileType fileType = FileTypes::determineType(initialFile);
-    Q_ASSERT(fileType == Image || fileType == Archive);
-
-    if (fileType == Image) {
+    if (FileInfo::isImageFile(initialFile)) {
         _archiveMode = false;
 
-        // Remember the first image
-        _pages.append(Page());
-        _pages.front().path = initialFile;
+        // Start the directory listing
+        _fileLister.list(initialFile);
 
-        // Start listing the directory
-        // Find the directory of the initial file
-        _currentDir = path.directory();
-
-        if (_currentDir == KUrl()) {
-            // Directory operation failed
-            kDebug()<<"Unable to get directory of "<<KUrl::fromPath(initialFile)<<endl;
-            return;
-        }
-
-        // Create the list job and hook up to its signals
-        _listJob = KIO::listDir(_currentDir);
-        connect(_listJob, SIGNAL(result(KJob *)),
-                this, SLOT(listingFinished(KJob *)));
-        connect(_listJob, SIGNAL(entries(KIO::Job *, const KIO::UDSEntryList &)),
-                this, SLOT(listingEntries(KIO::Job *, const KIO::UDSEntryList &)));
-
-        // Start the listing
-        KIO::Scheduler::scheduleJob(_listJob);
-
-        kDebug()<<"Started directory listing for "<<initialFile<<endl;
-
-    } else {
+    } else if (FileInfo::isArchiveFile(initialFile)) {
         _archiveMode = true;
-
         _archivePath = initialFile;
-        _currentDir = path.directory();
+        _archiveType = FileInfo::getArchiveType(_archivePath);
 
-        // Check that the temp directory is writable
-        //QDir::tempPath();
-
-        _listingBodyReached = false;
-        _filenameLine = true;
-        _listingBodyFinished = false;
-        _currentInputLine = "";
-
-        // List the contents of the archive
-        QStringList args;
-        args.append("vr");
-        args.append(_archivePath);
-        _extracterProcess.start("unrar", args);
-
-        kDebug()<<"Started archive listing for "<<initialFile<<endl;
+        // Start the archive listing
+        _extractLister.list(_archiveType, _archivePath);
+    } else {
+        Q_ASSERT(false);
     }
-}
-
-
-int PageLoader::numPages() const
-{
-    return _pages.size();
-}
-
-bool PageLoader::isPageRead(int pageNum)
-{
-    Q_ASSERT(pageNum < _pages.size());
-
-    return !_pages[pageNum].pixmap.isNull();
 }
 
 bool PageLoader::isPageScaled(int pageNum)
 {
-    Q_ASSERT(pageNum < _pages.size());
+    Q_ASSERT(pageNum < _numPages);
     Q_ASSERT(!_pages[pageNum].pixmap.isNull());
     Q_ASSERT(_pages[pageNum].fullSize.isValid());
 
@@ -139,71 +347,32 @@ void PageLoader::startZoomMode()
 {
     Q_ASSERT(!_zoomMode);
     _zoomMode = true;
+
+    // When switching to zoom mode, re-decode the the current pages at full resolution
+    startReadingPage(_targetPage[0]);
+    if (_targetPage[1] != -1) {
+        startReadingPage(_targetPage[1]);
+    }
 }
-void PageLoader::stopZoomMode(int nextPage)
+
+void PageLoader::stopZoomMode()
 {
     Q_ASSERT(_zoomMode);
     _zoomMode = false;
 
     // Schedule the decoding of any unscaled pages
-    int delta = 0;
-    _bufferStart = nextPage;
-    _bufferEnd = nextPage;
-    for (int i = 0; i < BUFFER_SIZE && i < _pages.size(); i++) {
-        if (_pages[nextPage + delta].pixmap.isNull() || !isPageScaled(nextPage + delta)) {
-            startReadingPage(nextPage + delta);
-        } else {
-            // Make sure the buffer edges get set correctly
-            if (nextPage + delta < _bufferStart) {
-                _bufferStart = nextPage + delta;
-            }
-            if (nextPage + delta > _bufferEnd) {
-                _bufferEnd = nextPage + delta;
-            }
+    _bufferStart = _targetPage[0];
+    _bufferEnd = _targetPage[0];
+    for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
+        if (_targetPage[0] + i < _numPages) {
+            startReadingPage(_targetPage[0] + i);
         }
-        if (delta <= 0) {
-            if (nextPage - delta + 1 >= _pages.size()) {
-                delta--;
-            } else {
-                delta = -delta + 1;
-            }
-        } else {
-            if (nextPage - delta < 0) {
-                delta++;
-            } else {
-                delta = -delta;
-            }
+        if (_targetPage[0] - i >= 0) {
+            startReadingPage(_targetPage[0] - i);
         }
     }
 }
-bool PageLoader::isZoomMode() const
-{
-    return _zoomMode;
-}
 
-const QPixmap &PageLoader::getPage(int pageNum)
-{
-    Q_ASSERT(pageNum < _pages.size());
-    Q_ASSERT(!_pages[pageNum].pixmap.isNull());
-
-    // Don't queue any decodes if zoom mode is active
-    if (!_zoomMode) {
-        // As we're getting this page, make sure we have a buffer of decoded pages to either side
-        if (_bufferEnd - pageNum < BUFFER_SIZE/2) {
-            for (int i = _bufferEnd + 1; i - pageNum <= BUFFER_SIZE/2 && i < _pages.size(); i++) {
-                startReadingPage(i);
-            }
-        }
-
-        if (pageNum - _bufferStart < BUFFER_SIZE/2) {
-            for (int i = _bufferStart - 1; pageNum - i <= BUFFER_SIZE/2 && i >= 0; i--) {
-                startReadingPage(i);
-            }
-        }
-    }
-
-    return _pages[pageNum].pixmap;
-}
 
 void PageLoader::startReadingPage(int pageNum)
 {
@@ -211,28 +380,33 @@ void PageLoader::startReadingPage(int pageNum)
     //Q_ASSERT(_pages[pageNum].pixmap.isNull());
 
     if (!_pages[pageNum].isLoading) {
-        _pages[pageNum].isLoading = true;
-        _pages[pageNum].loadingTime.restart();
-
-        kDebug()<<"Queueing page "<<pageNum<<" decode"<<endl;
+        kDebug()<<"Queueing page "<<pageNum<<" decode, display size "<<_displaySize<<endl;
 
         // If we're in zoom mode, decode an unscaled version of the page
         if (_zoomMode) {
+            _pages[pageNum].isLoading = true;
+            _pages[pageNum].loadingTime.restart();
+
             // Note: if we're just resizing the window, maybe we don't need to scale from the image's
             //  full resolution. Then again, scaling from the full resolution will give the highest
             //  qualitity results
             if (_archiveMode) {
-                _decodeWeaver.enqueue(new ExtractDecodeJob(pageNum, _pages[pageNum].path, QSize(), _archivePath));
+                _decodeWeaver.enqueue(new ExtractDecodeJob(pageNum, _pages[pageNum].path, QSize(), _archiveType, _archivePath));
             } else {
                 _decodeWeaver.enqueue(new FileDecodeJob(pageNum, _pages[pageNum].path, QSize()));
             }
             // The buffer will have to be reaccessed after the zoom mode is finished
 
         } else {
-            if (_archiveMode) {
-                _decodeWeaver.enqueue(new ExtractDecodeJob(pageNum, _pages[pageNum].path, _displaySize, _archivePath));
-            } else {
-                _decodeWeaver.enqueue(new FileDecodeJob(pageNum, _pages[pageNum].path, _displaySize));
+            if (_pages[pageNum].pixmap.isNull() || !isPageScaled(pageNum)) {
+                // Only reload the page if its the wrong size
+                _pages[pageNum].isLoading = true;
+                _pages[pageNum].loadingTime.restart();
+                if (_archiveMode) {
+                    _decodeWeaver.enqueue(new ExtractDecodeJob(pageNum, _pages[pageNum].path, _displaySize, _archiveType, _archivePath));
+                } else {
+                    _decodeWeaver.enqueue(new FileDecodeJob(pageNum, _pages[pageNum].path, _displaySize));
+                }
             }
 
             if (pageNum < _bufferStart) {
@@ -253,11 +427,10 @@ void PageLoader::decodeDone(ThreadWeaver::Job *job)
 
     int pageNum = decodeJob->pageNum();
 
-    kDebug()<<"Decode job done"<<endl;
-    kDebug()<<"Time elapsed (page "<<pageNum<<"): "<<_pages[pageNum].loadingTime.elapsed()<<" ms"<<endl;
-
     // Check that the decode suceeded
     if (decodeJob->image().isNull()) {
+        // Make sure the job's QImage is freed
+        delete decodeJob;
         emit pageReadFailed(pageNum);
         return;
     }
@@ -267,204 +440,102 @@ void PageLoader::decodeDone(ThreadWeaver::Job *job)
     _pages[pageNum].pixmap = QPixmap::fromImage(decodeJob->image());
     kDebug()<<"QImage to QPixmap conversion: "<<time.elapsed()<<" ms"<<endl;
 
+    kDebug()<<"Time elapsed (page "<<pageNum<<"): "<<_pages[pageNum].loadingTime.elapsed()<<" ms"<<endl;
+
     _pages[pageNum].fullSize = decodeJob->fullImageSize();
     _pages[pageNum].isLoading = false;
+
+    // Make sure the job's QImage is freed
+    delete decodeJob;
 
     // Check that the image to pixmap conversion suceeded
     if (_pages[pageNum].pixmap.isNull()) {
         emit pageReadFailed(pageNum);
-    } else {;
-        emit pageRead(pageNum);
-    }
-}
-
-void PageLoader::listingEntries(KIO::Job *job, const KIO::UDSEntryList &list)
-{
-    Q_ASSERT(job == _listJob);
-
-    //kDebug()<<"Progress: "<<_listJob->percent()<<"%"<<endl<<"Entries: "<<list.size()<<endl;
-
-    Page tempPage;
-    KUrl tempPath;
-
-    // Some directory residents have been found; go through the list looking for images
-    for (KIO::UDSEntryList::const_iterator i = list.begin(); i != list.end(); i++) {
-        if (!i->isDir()) {
-            tempPath = _currentDir;
-            tempPath.addPath(i->stringValue(KIO::UDS_NAME));
-            tempPage.path = tempPath.toLocalFile();
-
-            if (FileTypes::determineType(tempPage.path) == Image) {
-                // This file is an image, add it to the list of pages
-                _pages.append(tempPage);
-            }
-        }
-    }
-}
-
-void PageLoader::listingFinished(KJob *job)
-{
-    Q_ASSERT(job == _listJob);
-
-    int initialPosition;
-
-    kDebug()<<"Job finished."<<endl;
-
-    if (_listJob->error()) {
-        // There was an error getting the directory listing
-        // Only let the user view the one file
-        while (_pages.size() > 1) {
-            _pages.pop_back();
-        }
-        _listJob->ui()->showErrorMessage();
-
-        initialPosition = 0;
-
-    } else {
-        // Remove the initial file from the list after determining its position
-        QString initialPath = _pages.front().path;
-        initialPosition = 0;
-        for (QList<Page>::iterator i = _pages.begin() + 1; i != _pages.end(); i++) {
-            if (i->path == initialPath) {
-                // The initial page has been found
-                break;
-            }
-            initialPosition++;
-        }
-
-        // Remove the duplicate from the list of pages
-        _pages.pop_front();
-
-        Q_ASSERT(initialPosition < _pages.size());
-    }
-
-    kDebug()<<"Total pages: "<<_pages.size()<<endl;
-    for (QList<Page>::iterator i = _pages.begin(); i != _pages.end(); i++) {
-        kDebug()<<"Path: "<<i->path<<endl;
-    }
-    emit pagesListed(initialPosition, _pages.size());
-
-    // Start reading pages
-    int delta = 0;
-    _bufferStart = initialPosition;
-    _bufferEnd = initialPosition;
-    for (int i = 0; i < BUFFER_SIZE && i < _pages.size(); i++) {
-        startReadingPage(initialPosition + delta);
-        if (delta <= 0) {
-            if (initialPosition - delta + 1 >= _pages.size()) {
-                delta--;
-            } else {
-                delta = -delta + 1;
-            }
-        } else {
-            if (initialPosition - delta < 0) {
-                delta++;
-            } else {
-                delta = -delta;
-            }
-        }
-    }
-
-    // Start listing the parent directory
-    KUrl parentDir = _currentDir;
-    if (!parentDir.cd("..")) {
-        kDebug()<<"Can't go up one directory from "<<_currentDir.prettyUrl()<<endl;
-    } else {
-        kDebug()<<"Parent dir: "<<parentDir<<endl;
-    }
-}
-
-void PageLoader::extracterOutputText()
-{
-    if (_listingBodyFinished) {
-        _extracterProcess.readAllStandardOutput();
         return;
     }
 
-    //kDebug()<<"Output ready"<<endl;
+    // Check if the this page needs displaying
+    if (!_twoPageMode || _targetPage[1] == -1) {
+        if (pageNum == _targetPage[0]) {
+            emit showOnePage(_pages[pageNum].pixmap, _targetPage[0], _numPages);
+        }
+    } else {
+        // If two pages are being displayed, display them both at once
 
-    QByteArray output = _extracterProcess.readAllStandardOutput();
-    int newLineIdx;
-
-    //kDebug()<<"Got output: "<<QString(output)<<endl;
-
-    while ((newLineIdx = output.indexOf('\n')) != -1) {
-        // New line found
-        // Fill a full line of input, excluding the new line
-        _currentInputLine.append(output.left(newLineIdx));
-        //kDebug()<<"Got full line of output: "<<QString(_currentInputLine)<<endl;
-
-        if (!_listingBodyReached) {
-            if (_currentInputLine.length() > 0 && _currentInputLine.count('-') == _currentInputLine.length()) {
-                // We've reached the start of the listing
-                _listingBodyReached = true;
-            }
-        } else {
-            // A full line listing data has been recieved
-            Q_ASSERT(_currentInputLine.length() > 0);
-            if (_filenameLine) {
-                if (_currentInputLine.count('-') == _currentInputLine.length()) {
-                    // We've reached the end of the listing
-                    // The rest of the data isn't useful
-                    _listingBodyFinished = true;
-                    return;
-                }
-                Q_ASSERT(_currentInputLine[0] == ' ');
-
-                Page newPage;
-                newPage.path = QString(_currentInputLine).trimmed();
-                Q_ASSERT(newPage.path.length() != 0);
-                _pages.append(newPage);
-            } else {
-                QString fullLine = _currentInputLine;
-                QStringList data = fullLine.split(" ", QString::SkipEmptyParts);
-                Q_ASSERT(data.size() == 9);
-
-                // Check if the previous entry was a directory
-                // Note: if rarred from windows, looks like ".D.....", from linux, looks like "drwxr-xr-x"
-                QString permissions = data[5];
-                if (permissions.contains('d', Qt::CaseInsensitive)) {
-                    _pages.pop_back();
-                }
-            }
-            _filenameLine = !_filenameLine;
+        // If one of the pages is wide, only show the primary page
+        if (isPageWide(_targetPage[0]) || isPageWide(_targetPage[1])) {
+            _targetPage[0] = _targetPage[_primaryPage];
+            _targetPage[1] = -1;
         }
 
-        // Start a new line of input, excluding the new line
-        _currentInputLine = "";
-        output = output.right(output.length() - (newLineIdx + 1));
+        if (pageNum == _targetPage[0]) {
+            if (isPageWide(pageNum)) {
+                kDebug()<<"Page "<<pageNum<<", target 0 wide"<<endl;
+                _targetPage[0] = _targetPage[_primaryPage];
+                _targetPage[1] = -1;
+
+                if (pageNum == _targetPage[0] || !_pages[_targetPage[0]].pixmap.isNull()) {
+                    emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
+                }
+            } else if (!_pages[_targetPage[1]].pixmap.isNull()) {
+                emit showTwoPages(_pages[pageNum].pixmap, _pages[_targetPage[1]].pixmap, _targetPage[0], _targetPage[1], _numPages);
+            }
+        } else if (pageNum == _targetPage[1]) {
+            if (isPageWide(pageNum)) {
+                kDebug()<<"Page "<<pageNum<<", target 1 wide"<<endl;
+                _targetPage[0] = _targetPage[_primaryPage];
+                _targetPage[1] = -1;
+
+                if (pageNum == _targetPage[0] || !_pages[_targetPage[0]].pixmap.isNull()) {
+                    emit showOnePage(_pages[_targetPage[0]].pixmap, _targetPage[0], _numPages);
+                }
+            } else if (!_pages[_targetPage[0]].pixmap.isNull()) {
+                emit showTwoPages(_pages[_targetPage[0]].pixmap, _pages[pageNum].pixmap, _targetPage[0], _targetPage[1], _numPages);
+            }
+        }
+    }
+}
+
+void PageLoader::listingDone(int initialPosition, const QStringList &files)
+{
+    Q_ASSERT(files.size() > 0);
+
+    Page newPage;
+
+    // Create a page entry for each file
+    kDebug()<<"Total pages: "<<files.size()<<endl;
+    for (QStringList::const_iterator i = files.begin(); i != files.end(); i++) {
+        newPage.path = *i;
+        _pages.append(newPage);
+
+        kDebug()<<"Path: "<<_pages.back().path<<endl;
+    }
+    _numPages = _pages.size();
+
+    // Choose the starting page(s)
+    _targetPage[0] = initialPosition;
+    if (_twoPageMode) {
+        if (_targetPage[0] + 1 < _numPages) {
+            _primaryPage = 0;
+            _targetPage[1] = initialPosition + 1;
+        } else {
+            _targetPage[1] = -1;
+        }
     }
 
-    // No new line, keep constructing a full line
-    _currentInputLine.append(output);
-}
-void PageLoader::extracterErrorText()
-{
-    kDebug()<<"Error text ready"<<endl;
-}
-void PageLoader::extracterError(QProcess::ProcessError)
-{
-    kDebug()<<"Error"<<endl;
-    Q_ASSERT(false);
-}
-void PageLoader::extracterFinished(int exitCode, QProcess::ExitStatus exitStatus)
-{
-    Q_ASSERT(exitCode == 0);
-    Q_ASSERT(exitStatus == QProcess::NormalExit);
-
-    // Note: pages might not be in a good order, depending on the decompressor's
-    //  "sorting" logic
-    kDebug()<<"Total pages: "<<_pages.size()<<endl;
-    for (QList<Page>::iterator i = _pages.begin(); i != _pages.end(); i++) {
-        kDebug()<<"Path: "<<i->path<<endl;
-    }
-    emit pagesListed(0, _pages.size());
+    // Synch the actions
+    updateEnabledActions();
 
     // Start reading pages
-    _bufferStart = 0;
-    _bufferEnd = 0;
-    for (int i = 0; i < BUFFER_SIZE && i < _pages.size(); i++) {
-        startReadingPage(i);
+    _bufferStart = initialPosition;
+    _bufferEnd = initialPosition;
+    for (int i = 1; i <= BUFFER_SIZE && i < _numPages; i++) {
+        if (initialPosition + i < _numPages) {
+            startReadingPage(initialPosition + i);
+        }
+        if (initialPosition - i >= 0) {
+            startReadingPage(initialPosition - i);
+        }
     }
 }
 

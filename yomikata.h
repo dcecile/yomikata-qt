@@ -23,22 +23,14 @@ private slots:
     void toggleFullScreen(bool checked);
     void toggleMenubar(bool checked);
 
-    void pagesListed(int initialPosition, int numPages);
-    void pageRead(int pageNum);
     void pageReadFailed(int pageNum);
 
-    void pageLeft();
-    void pageRight();
+    void enableForward(bool enabled);
+    void enableBackward(bool enabled);
 
 private:
-    void changePage();
-
-    void resizeEvent(QResizeEvent *event);
     void wheelEvent(QWheelEvent *event);
-
-    void timerEvent(QTimerEvent *event);
-
-    void synchronizeActions();
+    void mousePressEvent(QMouseEvent *event);
 
     void createActions();
 
@@ -48,20 +40,16 @@ private:
     enum PageMode {SingleMode, ComicsMode, MangaMode};
     PageMode _pageMode;
 
-    int _numPages;
-
-    int _targetPage;
-    int _targetPageB;
-
     PageLoader _pageLoader;
 
     PageDisplay *_pageDisplay;
 
+    QAction *_pageForwardAction;
+    QAction *_pageBackwardAction;
     KAction *_pageLeftAction;
     KAction *_pageRightAction;
-
-    QBasicTimer _pageNumberTimer;
-    QLabel *_pageNumberLabel;
+    KAction *_pageToStartAction;
+    KAction *_pageToEndAction;
 };
 
 #endif

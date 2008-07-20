@@ -1,8 +1,15 @@
+#include <KDebug>
+
 #include "decodejob.h"
 
 DecodeJob::DecodeJob(int pageNum, const QString &path, const QSize &boundingSize)
     :_pageNum(pageNum), _path(path), _boundingSize(boundingSize)
 {
+}
+
+DecodeJob::~DecodeJob()
+{
+    //kDebug()<<"DecodeJob deconstructing"<<endl;
 }
 
 int DecodeJob::pageNum() const

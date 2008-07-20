@@ -6,13 +6,15 @@
 #include <QIODevice>
 #include <KJob>
 #include <KUrl>
-#include <kio/job.h>
-#include <kio/jobclasses.h>
 #include <threadweaver/ThreadWeaver.h>
 #include <QTime>
 #include <QProcess>
 
-using namespace ThreadWeaver; // HACK
+#include "filelister.h"
+#include "extractlister.h"
+#include "fileinfo.h"
+
+using ThreadWeaver::Job; // HACK
 
 class PageLoader : public QObject
 {
@@ -21,48 +23,62 @@ class PageLoader : public QObject
 public:
     PageLoader();
 
+    bool isForwardEnabled() const;
+    bool isBackwardEnabled() const;
+
+public slots:
     void setDisplaySize(const QSize &displaySize);
+    void setTwoPageMode(bool enabled);
 
     void initialize(const QString &initialFile);
 
-    int numPages() const;
+    void navigateForward();
+    void navigateBackward();
+    void navigateForwardOnePage();
+    void navigateToStart();
+    void navigateToEnd();
 
-    bool isPageRead(int pageNum);
+signals:
+    void forwardEnabled(bool enabled);
+    void backwardEnabled(bool enabled);
 
-    bool isPageScaled(int pageNum);
+    void showOnePage(const QPixmap &page, int pageNum, int totalPages);
+    void showTwoPages(const QPixmap &pageA, const QPixmap &pageB, int pageNumA, int pageNumB, int totalPages);
 
-    void startZoomMode();
-    void stopZoomMode(int nextPage);
-    bool isZoomMode() const;
+    void showPageNumber(int pageNumA, int pageNumB, int totalPages);
+
+    void pageReadFailed(int pageNum);
+
+private:
+    void updateEnabledActions();
 
     void startReadingPage(int pageNum);
 
-    const QPixmap &getPage(int pageNum);
+    void changePage();
 
-signals:
-    void pagesListed(int initialPosition, int numPages);
-    void pageRead(int pageNum);
-    void pageReadFailed(int pageNum);
+    bool isPageScaled(int pageNum);
+    bool isPageWide(int pageNum);
+
+    void startZoomMode();
+    void stopZoomMode();
 
 private slots:
+    void listingDone(int initialPosition, const QStringList &files);
+
     void decodeDone(Job *job);
 
-    void listingEntries(KIO::Job *job, const KIO::UDSEntryList &list);
-    void listingFinished(KJob *job);
-
-    void extracterOutputText();
-    void extracterErrorText();
-    void extracterError(QProcess::ProcessError error);
-    void extracterFinished(int exitCode, QProcess::ExitStatus exitStatus);
-
 private:
-    bool _archiveMode;
+    bool _twoPageMode;
+
+    int _primaryPage;
+    int _targetPage[2];
 
     QSize _displaySize;
     bool _zoomMode;
+    bool _forwardEnabled;
+    bool _backwardEnabled;
 
-    KUrl _currentDir;
-    KIO::ListJob *_listJob;
+    bool _archiveMode;
 
     struct Page
     {
@@ -73,24 +89,21 @@ private:
         bool isLoading;
         bool isScaled;
         QTime loadingTime;
-
-        int fileSize;
-        int compressedSize;
     };
 
     QList<Page> _pages;
+    int _numPages;
 
     int _bufferStart;
     int _bufferEnd;
 
     ThreadWeaver::Weaver _decodeWeaver;
 
+    FileLister _fileLister;
+    ExtractLister _extractLister;
+
     QString _archivePath;
-    QProcess _extracterProcess;
-    bool _listingBodyReached;
-    bool _listingBodyFinished;
-    bool _filenameLine;
-    QByteArray _currentInputLine;
+    FileInfo::ArchiveType _archiveType;
 
 private:
     static const int BUFFER_SIZE;
