@@ -18,7 +18,7 @@ public:
     void list(FileInfo::ArchiveType archiveType, const QString &archivePath);
 
 signals:
-    void listBuilt(int initialPosition, const QStringList &files);
+    void listBuilt(QStringList files, QString startPageName);
 
 private slots:
     void rarOutputText();

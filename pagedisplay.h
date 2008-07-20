@@ -13,7 +13,7 @@ class PageDisplay : public QWidget
     Q_OBJECT
 
 public:
-    PageDisplay(QWidget *parent = 0);
+    PageDisplay(bool mangaModeEnabled, QWidget *parent = 0);
 
 signals:
     void displaySizeChanged(const QSize &newSize);

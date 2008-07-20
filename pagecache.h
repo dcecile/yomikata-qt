@@ -23,7 +23,7 @@ class PageCache : public QObject
     Q_OBJECT
 
 public:
-    PageCache();
+    PageCache(bool twoPageMode);
 
     void setData(int pageNum, const QImage &image, const QSize &fullSize);
 
@@ -33,7 +33,7 @@ public:
 
 public slots:
     void reset();
-    void initialize(int startPageNum, const QStringList &files);
+    void initialize(QStringList files, QString startPageName);
 
     void setTwoPageMode(bool enabled);
 

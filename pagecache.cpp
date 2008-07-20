@@ -16,11 +16,10 @@ const int PageCache::CACHE_LIMIT = 30 * 1024 * 1024;
 const QEvent::Type PageCache::DECODED_EVENT = QEvent::User;
 const QEvent::Type PageCache::DEALLOCATE_EVENT = QEvent::Type(int(QEvent::User) + 1);
 
-PageCache::PageCache()
+PageCache::PageCache(bool twoPageMode)
+    :_twoPageMode(twoPageMode)
 {
     _resizeMode = false;
-
-    _twoPageMode = true;
 
     _targetPage[0] = -1;
     _targetPage[1] = -1;
@@ -482,7 +481,7 @@ void PageCache::reset()
     _noRequestedPages.wakeAll();
 }
 
-void PageCache::initialize(int startPageNum, const QStringList &files)
+void PageCache::initialize(QStringList files, QString startPageName)
 {
     QMutexLocker locker(&_mutex);
 
@@ -492,13 +491,41 @@ void PageCache::initialize(int startPageNum, const QStringList &files)
 
     kDebug()<<"Total pages: "<<_numPages<<endl;
 
+    // Sort the entries lexigraphically
+    // TODO: Use std::sort, make sure directory trees get sorted correctly
+    QStringList::iterator i, j;
+    QString temp;
+    for (i = files.begin(); i != files.end(); i++) {
+        for (j = i + 1; j != files.end(); j++) {
+            if (QString::localeAwareCompare(*i, *j) > 0) {
+                temp = *j;
+                *j = *i;
+                *i = temp;
+            }
+        }
+    }
+
     // Create a page entry for each file
     Page newPage;
-    for (QStringList::const_iterator i = files.begin(); i != files.end(); i++) {
+    for (i = files.begin(); i != files.end(); i++) {
         newPage.path = *i;
         _pages.append(newPage);
 
-        if (i == files.begin()) {kDebug()<<"Path: "<<_pages.back().path<<endl;}
+        if (1||i == files.begin()) {kDebug()<<"Path: "<<_pages.back().path<<endl;}
+    }
+
+    // Determine the position of the initial file if required
+    int startPageNum = 0;
+
+    if (!startPageName.isNull()) {
+        for (QStringList::iterator i = files.begin(); i != files.end(); i++, startPageNum++) {
+            if (*i == startPageName) {
+                // The file's been found
+                break;
+            }
+        }
+        // Check that the file was found
+        Q_ASSERT(startPageNum < _numPages);
     }
 
     // Choose the starting page(s)

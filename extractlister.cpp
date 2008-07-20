@@ -269,7 +269,7 @@ void ExtractLister::finished(int exitCode, QProcess::ExitStatus exitStatus)
 
     // Note: pages might not be in a good order, depending on the decompressor's
     //  "sorting" logic
-    emit listBuilt(0, _fileList);
+    emit listBuilt(_fileList, 0);
 }
 
 void ExtractLister::cleanZipFilenames()

@@ -4,6 +4,7 @@
 #include <KDebug>
 #include <QTime>
 #include <QTextStream>
+#include <KApplication>
 
 #include "pagedisplay.h"
 
@@ -12,11 +13,10 @@
 
 const qreal PageDisplay::ZOOM_MODES[] = {1.2, 2.0, 3.0, -1.0};
 
-PageDisplay::PageDisplay(QWidget *parent)
-    :QWidget(parent)
+PageDisplay::PageDisplay(bool mangaMode, QWidget *parent)
+    :QWidget(parent), _mangaMode(mangaMode)
 {
     _displaying = false;
-    _mangaMode = true;
     _zoomEnabled = false;
     _zoomIndex = 1;
     _boundingSize = _displaySize = size();
@@ -50,6 +50,7 @@ void PageDisplay::loadingStarted()
 
 void PageDisplay::setMangaMode(bool enabled)
 {
+    Q_ASSERT(false);
     _mangaMode = enabled;
 }
 
@@ -295,6 +296,9 @@ void PageDisplay::paintEvent(QPaintEvent *event)
         return;
     }
 
+    // Make sure the previous paint is ACTUALLY FINISHED
+    KApplication::kApplication()->syncX();
+
     //kDebug()<<"Painting "<<event->rect()<<endl;
 
     //QTime time;time.start();
@@ -538,6 +542,8 @@ void PageDisplay::adjustLayout()
 
 void PageDisplay::resizeEvent(QResizeEvent *)
 {
+    kDebug()<<"Resized to "<<size()<<endl;
+
     // Don't move the labels, just hide them
     if (_pageNumberLabel->isVisible()) {
         _pageNumberTimer.stop();

@@ -16,7 +16,7 @@ public:
     void list(const QString &initialFile);
 
 signals:
-    void listBuilt(int initialPosition, const QStringList &files);
+    void listBuilt(QStringList files, QString startPageName);
 
 private slots:
     void entries(KIO::Job *job, const KIO::UDSEntryList &list);

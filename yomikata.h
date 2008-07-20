@@ -2,10 +2,12 @@
 #define YOMIKATA_H
 
 #include <KMainWindow>
+#include <KXmlGuiWindow>
 #include <KTextEdit>
 #include <QLabel>
 #include <QBoxLayout>
 #include <KAction>
+#include <KSelectAction>
 #include <QBasicTimer>
 
 #include "pagecache.h"
@@ -15,7 +17,7 @@
 #include "extractdecodethread.h"
 #include "pagedisplay.h"
 
-class Yomikata : public KMainWindow
+class Yomikata : public KXmlGuiWindow
 {
     Q_OBJECT
 
@@ -37,6 +39,10 @@ private slots:
     void enableZoomIn(bool enabled);
     void enableZoomOut(bool enabled);
 
+    void setSinglePageView();
+    void setComicsView();
+    void setMangaView();
+
 private:
     void startListing(const QString &initialFile);
 
@@ -49,8 +55,7 @@ private:
 
 private:
     // Current state
-    enum PageMode {SingleMode, ComicsMode, MangaMode};
-    PageMode _pageMode;
+    enum PageMode {SingleMode=0, ComicsMode, MangaMode};
 
     // Loaded modules
     PageCache _pageCache;
@@ -71,6 +76,11 @@ private:
     KAction *_zoomToggleAction;
     KAction *_zoomInAction;
     KAction *_zoomOutAction;
+
+    KSelectAction *_viewSelectAction;
+    KAction *_singlePageAction;
+    KAction *_comicsViewAction;
+    KAction *_mangaViewAction;
 
     // Loading stuff
     bool _archiveMode;

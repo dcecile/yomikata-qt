@@ -1,5 +1,4 @@
 #include <KApplication>
-#include <KAction>
 #include <KLocale>
 #include <KActionCollection>
 #include <KStandardAction>
@@ -15,17 +14,18 @@
 #include <KToolBar>
 #include <KToggleFullScreenAction>
 #include <QDir>
+#include <KStatusBar>
 
 #include "yomikata.h"
 #include "fileinfo.h"
 #include "testwidget.h"
+#include "settings.h"
 
 Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
-    :KMainWindow(parent), _fileDecodeThread(&_pageCache), _extractDecodeThread(&_pageCache)
+    :KXmlGuiWindow(parent), _pageCache((PageMode)Settings::viewMode() != SingleMode), _fileDecodeThread(&_pageCache), _extractDecodeThread(&_pageCache), _pageDisplay((PageMode)Settings::viewMode() == MangaMode)
 {
-    // Set initial state
-    _pageMode = MangaMode;
-    //_pageMode = SingleMode;
+    PageMode pageMode = (PageMode)Settings::viewMode();
+    Q_ASSERT(pageMode == SingleMode || pageMode == ComicsMode || pageMode == MangaMode);
 
     // Create the widget for displaying the pages
     setCentralWidget(&_pageDisplay);
@@ -41,6 +41,9 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
     // Load default toolbars, shortcuts
     setupGUI();
     //menuBar()->show();
+
+    // Take off the status bar
+    setStatusBar(0);
 
     // Set the actions into the correct state
     enableForward(false);
@@ -70,10 +73,10 @@ Yomikata::Yomikata(const QString &initialArg, QWidget *parent)
     connect(&_pageDisplay, SIGNAL(zoomOutEnabled(bool)), this, SLOT(enableZoomOut(bool)));
 
     // Connect to the listers
-    connect(&_fileLister, SIGNAL(listBuilt(int, const QStringList &)),
-            &_pageCache, SLOT(initialize(int, const QStringList &)));
-    connect(&_extractLister, SIGNAL(listBuilt(int, const QStringList &)),
-            &_pageCache, SLOT(initialize(int, const QStringList &)));
+    connect(&_fileLister, SIGNAL(listBuilt(QStringList, QString)),
+             &_pageCache, SLOT(initialize(QStringList, QString)));
+    connect(&_extractLister, SIGNAL(listBuilt(QStringList, QString)),
+             &_pageCache, SLOT(initialize(QStringList, QString)));
 
     _pageCache.setDisplaySize(_pageDisplay.size());
 
@@ -228,6 +231,22 @@ void Yomikata::mousePressEvent(QMouseEvent *event)
     }
 }
 
+void Yomikata::setSinglePageView()
+{
+    Settings::setViewMode(SingleMode);
+    Settings::self()->writeConfig();
+}
+void Yomikata::setComicsView()
+{
+    Settings::setViewMode(ComicsMode);
+    Settings::self()->writeConfig();
+}
+void Yomikata::setMangaView()
+{
+    Settings::setViewMode(MangaMode);
+    Settings::self()->writeConfig();
+}
+
 void Yomikata::enableForward(bool enabled)
 {
     _pageForwardAction->setEnabled(enabled);
@@ -354,6 +373,22 @@ void Yomikata::createActions()
     _zoomOutAction->setObjectName("zoom_out");
     connect(_zoomOutAction, SIGNAL(triggered(bool)), &_pageDisplay, SLOT(zoomOut()));
     actionCollection()->addAction(_zoomOutAction->objectName(), _zoomOutAction);
+
+    // View mode
+    _viewSelectAction = new KSelectAction(i18n("View &Mode"), this);
+    _singlePageAction = _viewSelectAction->addAction(i18n("&Single Page"));
+    _singlePageAction->setObjectName("single_page");
+    connect(_singlePageAction, SIGNAL(triggered(bool)), this, SLOT(setSinglePageView()));
+    actionCollection()->addAction(_singlePageAction->objectName(), _singlePageAction);
+    _comicsViewAction = _viewSelectAction->addAction(i18n("&Comics View"));
+    _comicsViewAction->setObjectName("comics_view");
+    connect(_comicsViewAction, SIGNAL(triggered(bool)), this, SLOT(setComicsView()));
+    actionCollection()->addAction(_comicsViewAction->objectName(), _comicsViewAction);
+    _mangaViewAction = _viewSelectAction->addAction(i18n("&Manga View"));
+    _mangaViewAction->setObjectName("manga_view");
+    connect(_mangaViewAction, SIGNAL(triggered(bool)), this, SLOT(setMangaView()));
+    actionCollection()->addAction(_mangaViewAction->objectName(), _mangaViewAction);
+    _viewSelectAction->setCurrentItem(Settings::viewMode());
 }
 
 void Yomikata::setAppDefaults()

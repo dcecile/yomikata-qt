@@ -31,7 +31,7 @@ void FileLister::list(const QString &initialFile)
     Q_ASSERT(!_currentDir.isEmpty());
 
     // Create the list job and hook up to its signals
-    _listJob = KIO::listDir(_currentDir);
+    _listJob = KIO::listDir(_currentDir, false);
     connect(_listJob, SIGNAL(entries(KIO::Job *, const KIO::UDSEntryList &)),
             this, SLOT(entries(KIO::Job *, const KIO::UDSEntryList &)));
     connect(_listJob, SIGNAL(result(KJob *)),
@@ -81,22 +81,11 @@ void FileLister::finished(KJob *job)
         _listJob->ui()->showErrorMessage();
 
         // Only let the user view the one file
-        emit listBuilt(0, QStringList(_initialFile));
+        emit listBuilt(QStringList(_initialFile), _initialFile);
 
     } else {
-        // Determine the position of the initial file
-        int initialPosition = 0;
-        for (QStringList::iterator i = _fileList.begin(); i != _fileList.end(); i++, initialPosition++) {
-            if (*i == _initialFile) {
-                // The initial page has been found
-                break;
-            }
-        }
-
-        Q_ASSERT(initialPosition < _fileList.size());
-
         // The listing is done
-        emit listBuilt(initialPosition, _fileList);
+        emit listBuilt(_fileList, _initialFile);
     }
 
     _listJob = 0;
