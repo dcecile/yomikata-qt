@@ -1,5 +1,15 @@
 project(yomikata)
 
+# Source files
+set(yomikata_SRCS
+    main.cpp
+)
+
+# Unit test files
+set(test_SRCS
+    test.cpp
+)
+
 # KDE4 dependency
 find_package(KDE4 REQUIRED)
 include_directories(${KDE4_INCLUDES})
@@ -8,18 +18,22 @@ include(KDE4Defaults)
 # Build options
 set(CMAKE_CXX_FLAGS "-Werror ${CMAKE_CXX_FLAGS}")
 
-# Source files
-set(yomikata_SRCS
-    main.cpp
-)
+# Unit test build
+foreach(src ${test_SRCS})
+    set(yomikata_SRCS ${yomikata_SRCS} test/${src})
+endforeach()
+include_directories(${CMAKE_SOURCE_DIR})
+add_definitions(-DUNIT_TESTING -DTEST_DRIVER_PATH=${RUNTIME_OUTPUT_DIRECTORY}/driver)
 
 # Build steps
 kde4_add_kcfg_files(yomikata_SRCS settings.kcfgc)
 kde4_add_executable(yomikata ${yomikata_SRCS})
-target_link_libraries(yomikata ${KDE4_KDEUI_LIBS})
+target_link_libraries(yomikata ${KDE4_KDEUI_LIBS} ${QT_QTTEST_LIBRARY} gcov)
+set_target_properties(yomikata PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
 # Unit testing
-add_subdirectory(test)
+enable_testing()
+add_test(yomikata yomikata)
 
 # Doxygen
 find_package(Doxygen)

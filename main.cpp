@@ -9,7 +9,11 @@
 
 //#include "yomikata.h"
 
+#ifndef UNIT_TESTING
 int main (int argc, char *argv[])
+#else
+int application_main (int argc, char *argv[])
+#endif
 {
     KAboutData aboutData("yomikata",
             "",

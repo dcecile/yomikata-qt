@@ -60,7 +60,7 @@ WARN_FORMAT            = "$file:$line: $text"
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = ${CMAKE_SOURCE_DIR}/
+INPUT                  = ${CMAKE_SOURCE_DIR}/ ${CMAKE_SOURCE_DIR}/doc/ ${CMAKE_SOURCE_DIR}/test/
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -172,13 +172,13 @@ FILTER_SOURCE_FILES    = NO
 # each generated HTML page. If it is left blank doxygen will generate a 
 # standard header.
 
-HTML_HEADER            = ${CMAKE_SOURCE_DIR}/doxygen/header.html
+HTML_HEADER            = ${CMAKE_SOURCE_DIR}/doc/header.html
 
 # The HTML_FOOTER tag can be used to specify a personal HTML footer for 
 # each generated HTML page. If it is left blank doxygen will generate a 
 # standard footer.
 
-HTML_FOOTER            = ${CMAKE_SOURCE_DIR}/doxygen/footer.html
+HTML_FOOTER            = ${CMAKE_SOURCE_DIR}/doc/footer.html
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading 
 # style sheet that is used by each HTML page. It can be used to 
@@ -187,7 +187,7 @@ HTML_FOOTER            = ${CMAKE_SOURCE_DIR}/doxygen/footer.html
 # the style sheet file to the HTML output directory, so don't put your own 
 # stylesheet in the HTML output directory as well, or it will be erased!
 
-HTML_STYLESHEET        = ${CMAKE_SOURCE_DIR}/doxygen/stylesheet.css
+HTML_STYLESHEET        = ${CMAKE_SOURCE_DIR}/doc/stylesheet.css
 
 #---------------------------------------------------------------------------
 # Configuration options related to the dot tool   
