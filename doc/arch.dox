@@ -1,4 +1,4 @@
-/**
+/*!
 
 @page archdesign Architectural Design
 
@@ -23,11 +23,76 @@ References the Book and uses personal information about image dimensions and vie
 Stores the most useful pages for later use. Page priority is gleaned from the Book and the Strategist.
 
 @section artificerarch Artificer
-Decodes images from files, as specified in the Index. Colludes with the Strategist to get the right measurements.
+Decodes images from files, as specified in the Index and gives feedback on decode progress. Colludes with the Strategist to get the right measurements.
 
 @section projectorarch Projector
 Used solely by the Steward to show images or loading messages.
 
+@section usecases Use Cases
+
+These use cases show how the classes interact.
+
+@subsection usestart Start
+- Steward told input file name
+- tells Index, waits for listing
+- Index does file listing, finds number of pages, file sizes, and file names
+- Steward initializes the others: Book, Strategist, and Depot
+- has Artificer start first decode
+- has Projecter display loading
+
+@subsection usedecode Decode a page
+- Artificer gets page number
+- gets file name from Indexer
+- extracts file
+- decodes image
+- scales according to size told by Strategist (maybe at same time as decode)
+
+@subsection usedecodedone Decode done
+- Artificer has decoded the page
+- notifies Steward with decoded page and whether needs another decode because none were queued
+- Steward puts page into Depot
+- Depot decaches page if necessary
+- Steward displays page if needed (maybe only display when both ready)
+- if needed, Steward asks Depot for a page needing precaching, and tells Artificer
+
+@subsection usepageturned Page turned
+- Steward clears previous queue for Artificer (those pages aren't being displayed any more)
+- check Depot for cached page
+- if cached, display
+- if not cached, request from Artificer
+- request may be queued due to current precache decodes
+- adjust cache priorities
+
+@subsection usewindowresize Window resized
+- Steward told window resized
+- tell Strategist window size changed
+- cancel queued pages
+- stop all precaching
+- check Depot for fullsize page
+- check Depot for thumbnail
+- have Artificer start decode/scaling
+- tell Presenter "loading"
+- resume precaching when page next turned
+
+@subsection usewidefound Wide page found
+- Artificer tells Strategist the page size
+- Strategist tells Book the page is wide
+- page order changed
+
+@subsection useshift Shift page
+- Steward told to shift pages
+- shifts pages of Book (page order changed)
+- checks Depot for cached pages
+- either displays to Projector or tells Projector "loading" and starts Artificer
+
+@subsection usepageorderchanged Page order changed
+- page order changed, so display sizes may change
+- due to wide page found, or pages shifted
+- all display sizes need to be recomputed by Strategist
+- all pages cached in Depot may be the wrong size
+- Artificer will double check the display size for currently decoding pages
+- when Depot checks cache, it will double check for correct display sizes
+- when Strategist is asked for display size, it will take into account the page order change
 
 @section archproblems Nasty architectural problems:
 - Multiple decode threads
@@ -92,5 +157,11 @@ Used solely by the Steward to show images or loading messages.
 - Historic data (response time, cache misses, extract/decode/scale times)
 - Connect user input events
 - Predict loading time to give good loading progress bar
+- Decode and scale craziness
+    - need paired page size
+    - window size may change
+    - page order may change
+    - low priority precache should be cancelled (probably)
+    - point of caching wrong sizes, full sizes, thumbnails (good to have maximized, normal, zoomed)
 
 */

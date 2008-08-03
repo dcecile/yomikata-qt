@@ -1,4 +1,4 @@
-/**
+/*!
 
 @page roadmap Roadmap
 
@@ -22,6 +22,7 @@ Responsiveness: precaching, stride, postcaching, prescaling, fast display
 - cache management
 - wait to learn image sizes
 - readjust gracefully when window size changes
+    - compare times for decode full + scale, decode/scale, full scale, part scale, and thumbnail scale
 - readjust gracefully when page layout changes
 
 Bookmarks: persistent user data, initial bookmark view
@@ -97,7 +98,7 @@ Reliable: bug-free and supports desktop ideosyncracies
 - Unit tests
 - MIME types
 - Archive errors
-- ZLIB/KIO archive handling
+- ZLIB/KIO/libarchive archive handling
 - Performance measurements
 - Unzip charset and special character issues
 - Listing charset issues (alleviate by using raw data?)

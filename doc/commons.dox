@@ -1,0 +1,41 @@
+/*!
+
+@page commons Code of the Commons
+
+Devs want
+- new features
+- no tedious testing
+- use another's code
+- meet user needs
+
+Users want
+- functionality
+- reliability
+- security
+- open development
+- bug responsiveness
+- feature discussions
+
+Obligations
+- setup guidelines
+- user needs
+- functional requirements
+- bug triaging
+- architectural rationale
+- class responsibilities
+- inline documentation
+- code formatting
+- unit testing
+- code coverage
+
+@section unittesting Unit testing
+- all non-gui classes
+- especially algorithmic, complex behaviour
+- optimized speed or space over simplicity and understandability
+- test class responsibilities
+- write tests first
+
+@section codecoverage Code coverage
+- 
+
+*/

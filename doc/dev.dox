@@ -1,0 +1,105 @@
+/*!
+
+@page gettingstarted Getting Started
+
+To get started developing Yomikata, the following items are needed:
+- KDE4 development environment including cmake
+
+Developer resources include:
+- <a href="http://techbase.kde.org">KDE development information</a>
+- <a href="http://doc.trolltech.com/mainclasses.html">QT reference</a> (<a href="/usr/share/doc/qt4-doc/html/mainclasses.html">local</a>)
+- <a href="http://api.kde.org/4.x-api/kdelibs-apidocs/">KDE API reference</a>
+- <a href="http://cmake.org/HTML/cmake-2.6.html">CMake reference</a> (<a href="/usr/share/doc/cmake/cmake.html">local</a>)
+- <a href="http://www.stack.nl/~dimitri/doxygen/manual.html">Doxygen manual</a> (<a href="/usr/share/doc/doxygen/html/index.html">local</a>)
+
+@section tools Development tools
+
+After much pain and deliberation the following tools are used in development:
+- Bazaar: Where in the world did this piece of code come from? Version control with sane rename handling, that does not get in the way of development. It works well under all platforms, and with my odd case of cross-partition Windows/Linux development, and it is perfect safe to convert to another format later on.
+    - Subversion does not handle renames well or support good branching. (Used by most big projects like KDE, anything Sourceforge.)
+    - Git is not meant to run on Windows and this project does not need Git's speed (it's not big enough). (Used by the Linux kernel and popular with KDE devs.)
+    - Mercurial seems less solid due to it's underuse, it uses external merge tools, and does not have official Windows binaries. (Used by Sun projects and Mozilla.) (Large bile between Bazaar and Mercurial, uninspiring.) (Japanese doc.)
+    - Bazaar is cross-platform.
+    - With Bazaar, repositories can be easily created and copied, and worked used in both Windows and Linux simultaneously (stored on NTFS, mounted in Linux).
+    - There is no fear of renaming files or totally reorganizing directory structures because all of the information is stored in Bazaar.
+    - Gives a very solid feeling because no hacks are needed and operations make sense (similar syntax to Subversion and much more reliable).
+    - Verbose history so it can be converted to other VCSs without problems (eg. importing to KDE or converting to Git).
+    - If feature branches or other distributed work-models are desired, Bazaar fully supports it.
+    - Tarball command allows easy exporting and distributing.
+- CMake: Okay I've got the source, how do I build it? Autotools are nasty on Windows and are wicked complicated to use and maintain on Linux. Visual Studio projects only work on Windows and are tricky to maintain. Thus a cross-platform, simple to use, and robust build system was needed: CMake.
+- QTest: How do I know my code still works? QTest is simple and integrates well with QT. I only need the simple tests, and QTest has good reporting features (along with a slew of command-line options).
+- GCov/LCov: All my unit tests pass, does that mean all of my code works? A good sanity check would be to look at the code coverage. This won't work under MVCS or other platforms that don't have gcc, but for regular use, it works well. LCov is made of Perl scripts and is not obvious to get running on Windows, but often GCov is fine for looking at coverage in single files. LCov will give a large project overview with readable annoted code for each file, and handles resetting the coverage counters.
+- Doxygen: I've got the code, how do I do anything with it? Programming is about communicating, and writing collaboratively. If people can't tell what you're saying, you aren't participating in a team project. Clear communication is just as important as working code, so the defacto standard Doxygen is being used. Instead of using Wikis or online documents for design, Doxygen is used to keep everything self-contained.
+
+@section setup Environment Setup
+
+Now that you've got the code, there might be a couple things you need to set up before you can start hacking away. You'll need the code, a compiler, a build system, development libraries, and an editor. They you need to generate the build files, and try building.
+
+@subsection setup-linux Setting up on Linux
+
+On Linux,
+- to get the code, install... and run the command...
+- g++ is the simple compiler choice, on Debian based systems, the package is called build-essentials
+- the buildsystem is called CMake
+- dev libaries are: QT4 and KDE4
+- for editors you can use vim, emacs, KDevelop, Kate, Eclipse...
+
+To build the project
+- if using an IDE, check if CMake can generate project files
+- create a new folder
+- if so, run cmake -G [IDE] [path-to-source] -E DevMode
+- else, run cmake [path-to-source] -E DevMode
+- run make, or build from your IDE
+
+@subsection setup-win Setting up on Windows
+
+On Windows, it is recommended to use mingw (your mileage may vary with Visual Studio)
+- to get the code, install... and run the command...
+- the recommended compiler comes with QT, so download the open-source edition of QT4
+- install and choose to install MinGW as well
+- also install dev libraries: KDE4
+- for editor, Eclipse, GVim, Notepad++
+
+To build the project
+- run CMake
+- choose source directory, make new folder for build directory
+- generate project files if using an IDE
+- go to the directory and run the command "mingw32-make", or build from your IDE
+
+@section practices Development practices
+
+After seeing past projects get off to many hard starts, I came up with a set of development practices that I found useful to overcome those previous problems.
+
+@subsection problem1 Problem 1: Fearful changes
+
+When making changes, I did not know if I irrevocablably damage the code. So I made successive tarball backups, and it was very messy and still not very comforting. Using a VCS (like Bazaar) to keep track of past code will help this problem. With frequent check-ins (to avoid large changes that may mostly work but still break something small and important) and good messages (to know what you were trying to do when you changed that code), you can stop worrying if you'll break something so bad that you won't know how to fix it. You'll be able to look at the history and see the sequences of changes that led to the current problem, and adopt fixes as appropriate.
+
+@subsection problem2 Problem 2: Inscrutible code
+- too hard to know what code does, or if it works in all cases
+- pseudocode construction
+- unit tests
+- code coverage
+
+@subsection problem3 Problem 3: Unintelligable design
+- can't explain the design, how it works, or why it was chosen
+- can't make changes without missing the important decision factors
+- good designs are easy to explain
+- explain class and module design in doxygen
+- explain alternatives considered, and decision factors
+
+@subsection problem4 Problem 4: Unfocused scope
+- didn't know what was important to code
+- didn't know why attributes valued (reliability, sustainability)
+- look at user and developer needs
+- build requirements directly from that--nothing else
+- let needs and requirements be open to criticism
+- document all of it in doxygen
+
+@subsection problem5 Problem 5: Expert eyes
+- enviroment setup, tools, program arch no longer problems
+- gained so much experience
+- at least show others how to learn
+- hopefully pass on applicable knowledge
+- when teaching, give continual overview and make goals and connections explicit
+
+*/
