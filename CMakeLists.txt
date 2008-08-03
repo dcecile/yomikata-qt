@@ -3,11 +3,13 @@ project(yomikata)
 # Source files
 set(yomikata_SRCS
     main.cpp
+    book.cpp
 )
 
 # Unit test files
 set(test_SRCS
     test.cpp
+    booktest.cpp
 )
 
 # KDE4 dependency

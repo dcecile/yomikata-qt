@@ -1,35 +1,56 @@
 #include <QtTest>
+#include <QDebug>
 
 #include "main.h"
 
-class TestQString: public QObject
-{
-    Q_OBJECT
-    private slots:
-        void toUpper();
-        void failUpper();
-        void main();
-};
+#include "booktest.h"
 
- void TestQString::toUpper()
+int main(int argc, char **argv)
 {
-    QString str = "Hello";
-    QCOMPARE(str.toUpper(), QString("HELLO"));
+    // Needs to start with a test name (exe name is always first)
+    // TODO Handle no params gracefully
+    Q_ASSERT(argc > 1);
+
+    // Make sure to relay the return value
+    int result = 0;
+
+    // Get the test name
+    QString testName(argv[1]);
+
+    // Check if the main program should be run
+    if (testName == "main") {
+        // Argument list is shortened by one
+        char **params = new char * [argc - 1];
+
+        // Put all but the the second argument in
+        params[0] = argv[0];
+        for (int i = 2; i < argc; i++) {
+            params[i - 1] = argv[i];
+        }
+
+        // Call main
+        result = application_main(argc - 1, params);
+
+        // Delete the new argument list
+        delete [] params;
+    } else {
+        QStringList params;
+
+        // Put all but the the second argument in
+        params<<argv[0];
+        for (int i = 2; i < argc; i++) {
+            params<<argv[i];
+        }
+
+        // Choose the test
+        if (testName == "book") {
+            BookTest bookTest;
+            result = QTest::qExec(&bookTest, params);
+        } else {
+            // TODO Handle unknown test name
+            Q_ASSERT(false);
+        }
+    }
+
+    return result;
 }
-
- void TestQString::failUpper()
-{
-    QString str = "Hello";
-    //QCOMPARE(str.toUpper(), QString("HLLO"));
-}
-
-void TestQString::main()
-{
-    char path[] = "TEST_DRIVER_PATH";
-    char *argv[] = {path};
-    application_main(1, argv);
-}
-
-QTEST_MAIN(TestQString);
-
-#include "testqstring.moc"
