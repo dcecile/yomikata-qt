@@ -27,6 +27,7 @@ Obligations
 - code formatting
 - unit testing
 - code coverage
+- class constructor/copy...
 
 @section unittesting Unit testing
 - all non-gui classes
