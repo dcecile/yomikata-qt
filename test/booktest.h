@@ -13,10 +13,6 @@ public:
     BookTest();
     ~BookTest();
 
-private:
-    void paired(int page, int paired);
-    void current(int page0, int page1);
-
 private slots:
     void simple();
     void widePages();

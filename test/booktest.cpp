@@ -5,11 +5,19 @@
 #include "book.h"
 
 #define PAIRED(page, pair) \
-    do {QCOMPARE(_book->pairedPage((page)), (pair));} while (false)
+    do \
+    { \
+        QCOMPARE(_book->pairedPage((page)), (pair)); \
+    } \
+    while (0)
 
-#define CURRENT(a, b) \
-    do {QCOMPARE(QCOMPARE(_book->page0(), (a)); \
-    QCOMPARE(_book->page1(), (b));} while (false)
+#define CURRENT(pageA, pageB) \
+    do \
+    { \
+        QCOMPARE(_book->page0(), (pageA)); \
+        QCOMPARE(_book->page1(), (pageB)); \
+    } \
+    while (0)
 
 BookTest::BookTest()
 {
@@ -17,17 +25,6 @@ BookTest::BookTest()
 
 BookTest::~BookTest()
 {
-}
-
-void BookTest::paired(int page, int pair)
-{
-    QCOMPARE(_book->pairedPage(page), pair);
-}
-
-void BookTest::current(int page0, int page1)
-{
-    QCOMPARE(_book->page0(), page0);
-    QCOMPARE(_book->page1(), page1);
 }
 
 /**
@@ -39,12 +36,11 @@ void BookTest::simple()
     _book = new Book(5);
 
     // Each page is paired except the last
-    PAIRED(0, 2);
-    paired(0, 1);
-    paired(1, 2);
-    paired(2, 3);
-    paired(3, 2);
-    paired(4, -1);
+    PAIRED(0, 1);
+    PAIRED(1, 0);
+    PAIRED(2, 3);
+    PAIRED(3, 2);
+    PAIRED(4, -1);
 
     delete _book;
 
@@ -52,12 +48,12 @@ void BookTest::simple()
     _book = new Book(6);
 
     // Each page is paired
-    paired(0, 1);
-    paired(1, 0);
-    paired(2, 3);
-    paired(3, 2);
-    paired(4, 5);
-    paired(5, 4);
+    PAIRED(0, 1);
+    PAIRED(1, 0);
+    PAIRED(2, 3);
+    PAIRED(3, 2);
+    PAIRED(4, 5);
+    PAIRED(5, 4);
 
     delete _book;
     _book = NULL;
@@ -72,24 +68,24 @@ void BookTest::widePages()
 
     // Set one wide, the others form pairs around it
     _book->setWide(2);
-    paired(0, 1);
-    paired(1, 0);
-    paired(2, -1);
-    paired(3, 4);
-    paired(4, 3);
-    paired(5, 6);
-    paired(6, 5);
+    PAIRED(0, 1);
+    PAIRED(1, 0);
+    PAIRED(2, -1);
+    PAIRED(3, 4);
+    PAIRED(4, 3);
+    PAIRED(5, 6);
+    PAIRED(6, 5);
 
     // Set two more paired, some pairs can't form
     _book->setWide(1);
     _book->setWide(6);
-    paired(0, -1);
-    paired(1, -1);
-    paired(2, -1);
-    paired(3, 4);
-    paired(4, 3);
-    paired(5, -1);
-    paired(6, -1);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, -1);
+    PAIRED(3, 4);
+    PAIRED(4, 3);
+    PAIRED(5, -1);
+    PAIRED(6, -1);
 
     delete _book;
     _book = NULL;
@@ -103,17 +99,17 @@ void BookTest::turning()
     _book = new Book(5);
 
     // Page to the end
-    current(0, 1);
+    CURRENT(0, 1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
     _book->next();
-    current(4, -1);
+    CURRENT(4, -1);
 
     // And back
     _book->previous();
-    current(2, 3);
+    CURRENT(2, 3);
     _book->previous();
-    current(0, 1);
+    CURRENT(0, 1);
 
     delete _book;
     _book = NULL;
@@ -127,29 +123,29 @@ void BookTest::turningWithWide()
     _book = new Book(5);
 
     // Check start
-    current(0, 1);
+    CURRENT(0, 1);
 
     // Set a page wide
     _book->setWide(1);
 
     // Page to the end
-    current(0, -1);
+    CURRENT(0, -1);
     _book->next();
-    current(1, -1);
+    CURRENT(1, -1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
     _book->setWide(2);
-    current(2, -1);
+    CURRENT(2, -1);
     _book->next();
-    current(3, 4);
+    CURRENT(3, 4);
 
     // And back
     _book->previous();
-    current(2, -1);
+    CURRENT(2, -1);
     _book->previous();
-    current(1, -1);
+    CURRENT(1, -1);
     _book->previous();
-    current(0, -1);
+    CURRENT(0, -1);
 
     delete _book;
     _book = NULL;
@@ -164,24 +160,24 @@ void BookTest::wideFuture()
     _book = new Book(12);
 
     // Page forward a bit
-    current(0, 1);
+    CURRENT(0, 1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
 
     // Learn about a wide page
     _book->setWide(8);
 
     // Page forward and hit the wide page
     _book->next();
-    current(4, 5);
+    CURRENT(4, 5);
     _book->next();
-    current(6, 7);
+    CURRENT(6, 7);
     _book->next();
-    current(8, -1);
+    CURRENT(8, -1);
     _book->next();
-    current(9, 10);
+    CURRENT(9, 10);
     _book->next();
-    current(11, -1);
+    CURRENT(11, -1);
 
     delete _book;
 
@@ -189,24 +185,24 @@ void BookTest::wideFuture()
     _book = new Book(12);
 
     // Page forward a bit
-    current(0, 1);
+    CURRENT(0, 1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
 
     // Learn about a new wide page
     _book->setWide(7);
 
     // Page forward and hit the wide page, the preceding pair can't form
     _book->next();
-    current(4, 5);
+    CURRENT(4, 5);
     _book->next();
-    current(6, -1);
+    CURRENT(6, -1);
     _book->next();
-    current(7, -1);
+    CURRENT(7, -1);
     _book->next();
-    current(8, 9);
+    CURRENT(8, 9);
     _book->next();
-    current(10, 11);
+    CURRENT(10, 11);
 
     delete _book;
     _book = NULL;
@@ -221,128 +217,130 @@ void BookTest::widePast()
     _book = new Book(11);
 
     // Page forward a bit
-    current(0, 1);
+    CURRENT(0, 1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
 
     // Learn about a wide page from before
     _book->setWide(0);
 
     // The current parity will not change
-    //CURRENT(2, 3);
-    paired(0, -1);
-    paired(1, -1);
-    paired(2, 3);
-    paired(4, 5);
-    paired(6, 7);
-    paired(8, 9);
-    paired(10, -1);
+    CURRENT(2, 3);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, 3);
+    PAIRED(4, 5);
+    PAIRED(6, 7);
+    PAIRED(8, 9);
+    PAIRED(10, -1);
 
     // Page forward
     _book->next();
-    current(4, 5);
+    CURRENT(4, 5);
 
     // Reset
     _book->setWide(4);
-    current(4, -1);
+    CURRENT(4, -1);
 
     // Page forward a bit
     _book->next();
-    current(5, 6);
+    CURRENT(5, 6);
     _book->next();
-    current(7, 8);
+    CURRENT(7, 8);
 
     // Learn about a wide page from before
     _book->setWide(6);
 
     // The current parity will not change
-    current(7, 8);
-    paired(0, -1);
-    paired(1, -1);
-    paired(2, 3);
-    paired(4, -1);
-    paired(5, -1);
-    paired(6, -1);
-    paired(7, 8);
-    paired(9, 10);
+    CURRENT(7, 8);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, 3);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, -1);
+    PAIRED(7, 8);
+    PAIRED(9, 10);
 
     // Page to the end
     _book->next();
-    current(9, 10);
+    CURRENT(9, 10);
 
     delete _book;
     _book = NULL;
 }
 
 /**
- * Test that a page of the current pair being set wide will keep the correct current page.
+ * Test that a page of the current pair being set wide will keep the correct
+current page.
  */
 void BookTest::currentWide()
 {
     _book = new Book(7);
 
     // Test paging forward
-    current(0, 1);
+    CURRENT(0, 1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
     _book->setWide(2);
-    current(2, -1);
+    CURRENT(2, -1);
     _book->next();
-    current(3, 4);
+    CURRENT(3, 4);
     _book->setWide(4);
-    current(3, -1);
+    CURRENT(3, -1);
     _book->next();
-    current(4, -1);
+    CURRENT(4, -1);
     _book->next();
-    current(5, 6);
+    CURRENT(5, 6);
 
     delete _book;
 
     _book = new Book(11);
 
     // Page forward
-    current(0, 1);
+    CURRENT(0, 1);
     _book->next();
-    current(2, 3);
+    CURRENT(2, 3);
     _book->setWide(2);
-    current(2, -1);
+    CURRENT(2, -1);
     _book->next();
-    current(3, 4);
+    CURRENT(3, 4);
     _book->next();
-    current(5, 6);
+    CURRENT(5, 6);
     _book->next();
-    current(7, 8);
+    CURRENT(7, 8);
     _book->next();
-    current(9, 10);
+    CURRENT(9, 10);
 
-    // Test paging back, and original pairings hold (??? why wouldn't they hold going forward???)
+    // Test paging back, and original pairings hold (??? why wouldn't they
+    // hold going forward???)
     /// @todo Test this with playing cards
     _book->previous();
-    current(7, 8);
+    CURRENT(7, 8);
     _book->setWide(8);
-    current(8, -1);
-    paired(8, -1);
-    paired(9, 10);
+    CURRENT(8, -1);
+    PAIRED(8, -1);
+    PAIRED(9, 10);
     _book->previous();
-    current(7, -1);
+    CURRENT(7, -1);
     _book->previous();
-    current(5, 6);
+    CURRENT(5, 6);
     _book->setWide(5);
-    current(6, -1);
-    paired(6, -1);
-    paired(7, -1);
+    CURRENT(6, -1);
+    PAIRED(6, -1);
+    PAIRED(7, -1);
     _book->previous();
-    current(5, -1);
+    CURRENT(5, -1);
     _book->previous();
-    current(3, 4);
+    CURRENT(3, 4);
     _book->previous();
-    current(2, -1);
+    CURRENT(2, -1);
     _book->previous();
-    current(0, 1);
+    CURRENT(0, 1);
     _book->setWide(0);
-    current(1, -1);
+    CURRENT(1, -1);
     _book->previous();
-    current(0, -1);
+    CURRENT(0, -1);
 
     delete _book;
     _book = NULL;
