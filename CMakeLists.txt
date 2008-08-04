@@ -4,6 +4,7 @@ project(yomikata)
 set(yomikata_SRCS
     main.cpp
     book.cpp
+    revision.cpp
 )
 
 # Unit test files
