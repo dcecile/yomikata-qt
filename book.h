@@ -6,13 +6,38 @@
 using std::vector;
 
 /**
+ * @brief A model of the physical book: what page it's open to, which pages are
+ * facing each other.
  *
+ * After being initialized, its pages can be turned, and dual pages
+ * need to be identified. Because it is just a digital model, the correct
+ * pages may not be facing each other: to compensate, the pages may be shifted
+ * forwards, going to the next page and reversing the page parity.
  *
- * Wide page rules:
- * - after setting wide, current parity will not change
- *     - special case: going back, and sooner page becomes wide -- no parity
- *       change (opposed to moving forward)
- * - pairs always follow book start, and wide pages
+ * Dual pages are two-page spreads in comic books that have been digitally
+ * merged together to form one image file. Because the dual pages are not known
+ * beforehand, and because the comic book may not follow the constraints of
+ * a physical comic book by matching pages correctly, rules need to be used
+ * to govern the behaviour of dual pages.
+ *
+ * In general, dual pages are shown to the user by themselves, thus if the book
+ * is currently opened to a dual page, there is only one current page. When
+ * paging forward, if a current page is discovered to be a dual page, the first
+ * page will always be shown by itself. Likewise, when paging backward and a
+ * current page is found to be dual, the later page will be shown by itself.
+ * After learning a dual page, the following two pages will become paired
+ * together with one exception: the currently displayed pages must not change.
+ * This maintains the rule that full pairs occur at the start of the book, and
+ * after each dual page, except when the page parity has been explicitly
+ * changed.
+ *
+ * One final exception is that no pages become stranded. Two solitary non-dual
+ * pages must not occur in direct sequence: this will make it impossible
+ * for them to be viewed together due to the nature of the shifting operation.
+ * When dual page is found, this condition must always be maintained.
+ *
+ * @todo shifting
+ * @todo notify on unexpected current page change
  */
 class Book
 {
@@ -23,7 +48,7 @@ public:
     void next();
     void previous();
 
-    void setWide(int page);
+    void setDual(int page);
 
     int page0() const;
     int page1() const;
@@ -34,7 +59,7 @@ private:
     enum Pair {Previous = -1, None, Next};
     struct Info
     {
-        bool wide;
+        bool dual;
         Pair pair;
     };
 

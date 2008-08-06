@@ -26,10 +26,10 @@ Book::Book(int numPages)
     // Set resize the info list
     _info.resize(_numPages);
 
-    // Set the wide info
+    // Set the dual info
     for (int i = 0; i < _numPages; i++)
     {
-        _info[i].wide = false;
+        _info[i].dual = false;
     }
 
     // Initialize the pairings
@@ -99,12 +99,40 @@ void Book::previous()
     _goingForward = false;
 }
 
-void Book::setWide(int page)
+/**
+ * Set a page as dual. To maintain how pairs should start after dual pages,
+ * and the current parity never changes, the following procedure is used.
+ * - unpair the dual page
+ * - set the current page correctly
+ * - if parity needs changing and the current parity won't change
+ *     - reset the parities after the new dual page, until another dual page is
+ *       found, or the end of the book is reached
+ * - keep pages from being stranded in the three cases
+ *     - a new dual page compresses the section coming before it
+ *     - a new dual page compresses the section coming before it and the current
+ *       pages get changed
+ *     - paging backward, a dual page is learned to be the first page of the
+ *       pair, and the following section is compressed to a size of two,
+ *       changing the current pages
+ */
+void Book::setDual(int page)
 {
     Q_ASSERT(page >= 0 && page < _numPages);
 
-    // Set the page as wide
-    _info[page].wide = true;
+    // If the page was paired, unpair it
+    if (_info[page].pair == Previous)
+    {
+        _info[page - 1].pair = None;
+        _info[page].pair = None;
+    }
+    else if (_info[page].pair == Next)
+    {
+        _info[page + 1].pair = None;
+        _info[page].pair = None;
+    }
+
+    // Set the page as dual
+    _info[page].dual = true;
 
     // If hit a page of the current two, switch to single
     if (_page1 != -1 && (page == _page0 || page == _page1))
@@ -122,33 +150,106 @@ void Book::setWide(int page)
         }
     }
 
-    // Reset all of the pairs
-    int i = 0;
+    // Check if parity needs changing
+    bool changeNeeded = false;
 
-    do
+    // The page needs to be before the second last page
+    // And the next two pages need to be non-dual and unpaired
+    if (page < _numPages - 2 && !_info[page + 1].dual && !_info[page + 2].dual
+            && _info[page + 1].pair == None)
     {
-        // If this is the last page, or it's wide, set it to solitary
-        if (i == _numPages - 1 || _info[i].wide)
+        changeNeeded = true;
+    }
+
+    // Check if the current parity would be changed
+    // If the current page comes after the dual page and there are no dual pages
+    // between them, cancel the change
+    if (changeNeeded && _page0 > page)
+    {
+        bool interveningDualPage = false;
+
+        for (int i = page + 1; i < _page0; i++)
         {
-            _info[i].pair = None;
-            i++;
+            if (_info[i].dual)
+            {
+                interveningDualPage = true;
+            }
         }
-        // If the next page is wide, set this and the next to solitary
-        else if (_info[i + 1].wide)
+
+        if (!interveningDualPage)
         {
-            _info[i].pair = None;
-            _info[i + 1].pair = None;
-            i += 2;
+            changeNeeded = false;
         }
-        // Else, set as adjacent pages
-        else
+    }
+
+    // If the change is needed, reset the parity for the pages after the new
+    // dual page
+    if (changeNeeded)
+    {
+        // Keep reseting pairs until a dual page or the end of the book is
+        // reached
+        int i;
+
+        for (i = page + 1; i < _numPages - 1 && !_info[i].dual
+                && !_info[i + 1].dual; i += 2)
         {
             _info[i].pair = Next;
             _info[i + 1].pair = Previous;
-            i += 2;
+        }
+
+        // Make sure the last page in the sequence is solitary (it's dual or
+        // the next is dual, or it's the last page)
+        if (i < _numPages && !_info[i].dual)
+        {
+            _info[i].pair = None;
         }
     }
-    while (i < _numPages);
+
+    // Test for stranding behind
+    if (page > 1)
+    {
+        bool solitarySingle0 = !_info[page - 2].dual
+                && _info[page - 2].pair == None;
+        bool solitarySingle1 = !_info[page - 1].dual
+                && _info[page - 1].pair == None;
+
+        if (solitarySingle0 && solitarySingle1)
+        {
+            // The preceding page should be dual
+            Q_ASSERT(page == 2 || _info[page - 3].dual);
+
+            // Pair the two stranded pages
+            _info[page - 2].pair = Next;
+            _info[page - 1].pair = Previous;
+
+            // Check if the current pages need pairing
+            if (_page0 == page - 2 || _page0 == page - 1)
+            {
+                Q_ASSERT(_page1 == -1);
+                _page0 = page - 2;
+                _page1 = page -1;
+            }
+        }
+    }
+
+    // Test for stranding forward
+    if (!_goingForward &&_page0 == page + 1 && page < _numPages - 2)
+    {
+        bool solitarySingle0 = !_info[_page0].dual && _page1 == -1;
+        bool solitarySingle1 = !_info[page + 2].dual
+                && _info[page + 2].pair == None;
+
+        if (solitarySingle0 && solitarySingle1)
+        {
+            // The proceding page should be dual
+            Q_ASSERT(page == _numPages - 3 || _info[page + 3].dual);
+
+            // Pair the two stranded pages
+            _page1 = _page0 + 1;
+            _info[_page0].pair = Next;
+            _info[_page1].pair = Previous;
+        }
+    }
 }
 
 int Book::page0() const

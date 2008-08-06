@@ -5,6 +5,10 @@
 
 class Book;
 
+/**
+ * @brief Unit testing for Book. Excercises all page turning and dual page
+ * situations.
+ */
 class BookTest : public QObject
 {
     Q_OBJECT
@@ -15,12 +19,14 @@ public:
 
 private slots:
     void simple();
-    void widePages();
+    void dualPages();
     void turning();
-    void turningWithWide();
-    void wideFuture();
-    void widePast();
-    void currentWide();
+    void turningWithDual();
+    void dualFuture();
+    void dualPast();
+    void currentDual();
+    void persistentParity();
+    void neverStranded();
 
 private:
     Book *_book;
