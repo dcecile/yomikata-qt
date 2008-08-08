@@ -10,43 +10,57 @@ set(yomikata_SRCS
 # Unit test files
 set(test_SRCS
     test.cpp
-    booktest.cpp
 )
+
+# Unit tests
+set(test_CLASSES
+    book
+)
+
+# TODO add install commands, and make an nsis script that uses the files
+#  in the w/e install dir
+# TODO make kde optional
+# TODO install into the build directory by default
+# TODO add clean_doc and clean_lcov to the clean target
+
+# Minimum CMake version
+cmake_minimum_required(VERSION 2.6)
+
+# Options
+include(cmake/Options.cmake)
 
 # KDE4 dependency
 find_package(KDE4 REQUIRED)
 include_directories(${KDE4_INCLUDES})
 include(KDE4Defaults)
 
-# Build options
-set(CMAKE_CXX_FLAGS "-Werror ${CMAKE_CXX_FLAGS}")
+# Development options
+if(DEV_MODE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+    set(CMAKE_INSTALL_PREFIX /usr
+        CACHE STRING
+        "Install p!ath prefix, prepended onto install directories.")
+endif()
 
 # Unit test build
-foreach(src ${test_SRCS})
-    set(yomikata_SRCS ${yomikata_SRCS} test/${src})
-endforeach()
-include_directories(${CMAKE_SOURCE_DIR})
-add_definitions(-DUNIT_TESTING -DTEST_DRIVER_PATH=${RUNTIME_OUTPUT_DIRECTORY}/driver)
+if(UNIT_TESTING)
+    include(cmake/UnitTesting.cmake)
+endif()
+
+# Code coverage build
+if(CODE_COVERAGE)
+    include(cmake/CodeCoverage.cmake)
+endif()
 
 # Build steps
 kde4_add_kcfg_files(yomikata_SRCS settings.kcfgc)
 kde4_add_executable(yomikata ${yomikata_SRCS})
-target_link_libraries(yomikata ${KDE4_KDEUI_LIBS} ${QT_QTTEST_LIBRARY} gcov)
-set_target_properties(yomikata PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
-
-# Unit testing
-enable_testing()
-add_test(yomikata yomikata)
+target_link_libraries(yomikata ${KDE4_KDEUI_LIBS} ${QT_QTTEST_LIBRARY}
+    ${COVERAGE_LIBRARY})
+set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
 
 # Doxygen
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    message(STATUS "Doxygen found, 'doc' target enabled")
-    configure_file(Doxyfile.config.doxy ${CMAKE_BINARY_DIR}/Doxyfile)
-    add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_BINARY_DIR}/Doxyfile DEPENDS ${CMAKE_BINARY_DIR}/Doxyfile COMMENT "Building doc")
-else(DOXYGEN_FOUND)
-    message(STATUS "Doxygen found, 'doc' target disabled")
-endif(DOXYGEN_FOUND)
+include(cmake/Doxygen.cmake)
 
 # Install files
 install(TARGETS yomikata DESTINATION ${BIN_INSTALL_DIR})
