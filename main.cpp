@@ -7,7 +7,8 @@
 #include <QByteArray>
 #include <QString>
 
-//#include "yomikata.h"
+#include "mainwindowkde.h"
+#include "mainwindowqt.h"
 
 #ifndef UNIT_TESTING
 int main (int argc, char *argv[])
@@ -35,19 +36,20 @@ int application_main (int argc, char *argv[])
     KCmdLineArgs *args = KCmdLineArgs::parsedArgs();
 
     QString initialArg;
-    if (args->count() == 1) {
+
+    if (args->count() == 1)
+    {
         initialArg = args->arg(0);
         kDebug()<<"Passed file:"<<initialArg;
 
-    } else if (args->count() > 1) {
+    }
+    else if (args->count() > 1)
+    {
         args->usageError(i18n("Only one initial file or directory is supported."));
     }
 
-    //Yomikata *window = new Yomikata(initialArg);
-    //window->show();
+    MainWindow *window = new MainWindowQt(initialArg);
+    window->show();
 
-    kDebug()<<"Hello world!";
-    return 0;
-
-    //return app.exec();
+    return app.exec();
 }

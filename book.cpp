@@ -21,7 +21,7 @@ Book::Book(int numPages)
         _page1 = -1;
     }
 
-    _goingForward = true;
+    _importantPageIsFirst = true;
 
     // Set resize the info list
     _info.resize(_numPages);
@@ -72,7 +72,7 @@ void Book::next()
     _page1 = pairedPage(_page0);
 
     // Going forward
-    _goingForward = true;
+    _importantPageIsFirst = true;
 }
 
 void Book::previous()
@@ -96,7 +96,100 @@ void Book::previous()
     }
 
     // Going backward
-    _goingForward = false;
+    _importantPageIsFirst = false;
+}
+
+/**
+ * A shift only happens if currently displaying one or two nondual pages and not
+ * at the end of a section; otherwise it is a normal page turn. When actually
+ * shifting, modify the parity of all pages in the section and make the second
+ * page the important one since it hasn't been seen yet.
+ */
+void Book::shiftNext()
+{
+    bool shift = true;
+
+    // Check that not displaying a dual page
+    if (_info[_page0].dual)
+    {
+        shift = false;
+    }
+
+    // Figure out the page to shift from
+    // (Special case when viewing the solitary page at the start of a section)
+    int lastPage;
+
+    if (_page1 == -1)
+    {
+        lastPage = _page0;
+    }
+    else
+    {
+        lastPage = _page1;
+    }
+
+    // Check that not at the end of the book
+    if (shift && lastPage == _numPages - 1)
+    {
+        shift = false;
+    }
+
+    // Check that the next page isn't dual
+    if (shift && _info[lastPage + 1].dual)
+    {
+        shift = false;
+    }
+
+    // If checks failed, just do a regular page turn
+    if (!shift)
+    {
+        next();
+        return;
+    }
+
+    // Set the curent pages to be shifted
+    _page0 = lastPage;
+    _page1 = lastPage + 1;
+
+    // The important page is the second (not see yet) page
+    _importantPageIsFirst = false;
+
+    // Find the start of this section
+    int boundary;
+
+    for (boundary = _page0 - 1; boundary >= 0; boundary--)
+    {
+        if (_info[boundary].dual)
+        {
+            break;
+        }
+    }
+
+    // Reset all pairs until the next dual page
+
+    // If the section starts at a page that would be paired to the previous
+    // page, skip over it
+    int i = boundary + 1;
+
+    if (i % 2 == _page1 % 2)
+    {
+        _info[i].pair = None;
+        i++;
+    }
+
+    // Continue with all pairs until the section end
+    for (; i < _numPages - 1
+         && !_info[i].dual && !_info[i + 1].dual; i += 2)
+    {
+        _info[i].pair = Next;
+        _info[i + 1].pair = Previous;
+    }
+
+    // If section ends in a solitary page, account for it
+    if (i < _numPages && !_info[i].dual)
+    {
+        _info[i].pair = None;
+    }
 }
 
 /**
@@ -138,7 +231,7 @@ void Book::setDual(int page)
     if (_page1 != -1 && (page == _page0 || page == _page1))
     {
         // If going forward, drop the second page
-        if (_goingForward)
+        if (_importantPageIsFirst)
         {
             _page1 = -1;
         }
@@ -233,7 +326,7 @@ void Book::setDual(int page)
     }
 
     // Test for stranding forward
-    if (!_goingForward &&_page0 == page + 1 && page < _numPages - 2)
+    if (!_importantPageIsFirst &&_page0 == page + 1 && page < _numPages - 2)
     {
         bool solitarySingle0 = !_info[_page0].dual && _page1 == -1;
         bool solitarySingle1 = !_info[page + 2].dual

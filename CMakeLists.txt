@@ -3,6 +3,12 @@ project(yomikata)
 # Source files
 set(yomikata_SRCS
     main.cpp
+    mainwindow.cpp
+    mainwindowkde.cpp
+    mainwindowqt.cpp
+
+    debug.cpp
+
     book.cpp
     revision.cpp
 )
@@ -55,7 +61,7 @@ endif()
 # Build steps
 kde4_add_kcfg_files(yomikata_SRCS settings.kcfgc)
 kde4_add_executable(yomikata ${yomikata_SRCS})
-target_link_libraries(yomikata ${KDE4_KDEUI_LIBS} ${QT_QTTEST_LIBRARY}
+target_link_libraries(yomikata ${KDE4_KDEUI_LIBS} ${KDE4_KPARTS_LIBS} ${QT_QTTEST_LIBRARY}
     ${COVERAGE_LIBRARY})
 set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
 
@@ -66,5 +72,5 @@ include(cmake/Doxygen.cmake)
 install(TARGETS yomikata DESTINATION ${BIN_INSTALL_DIR})
 install(FILES yomikata.desktop  DESTINATION  ${XDG_APPS_INSTALL_DIR})
 install(FILES yomikata.kcfg  DESTINATION  ${KCFG_INSTALL_DIR})
-install(FILES yomikataui.rc DESTINATION  ${DATA_INSTALL_DIR}/yomikata)
+install(FILES yomikataui.rc DESTINATION  ${DATA_INSTALL_DIR}/${CMAKE_PROJECT_NAME})
 kde4_install_icons(${ICON_INSTALL_DIR})

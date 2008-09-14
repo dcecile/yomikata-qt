@@ -47,6 +47,7 @@ public:
 
     void next();
     void previous();
+    void shiftNext();
 
     void setDual(int page);
 
@@ -68,7 +69,7 @@ private:
     vector<Info> _info;
     int _page0;
     int _page1;
-    bool _goingForward;
+    bool _importantPageIsFirst;
 };
 
 #endif

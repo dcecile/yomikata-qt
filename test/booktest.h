@@ -27,6 +27,10 @@ private slots:
     void currentDual();
     void persistentParity();
     void neverStranded();
+    void shifting();
+    void shiftingCoverage();
+    void currentDualWithShifting();
+    void persistentShiftedParity();
 
 private:
     Book *_book;

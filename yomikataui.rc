@@ -8,9 +8,6 @@
         <Action name="page_left" />
         <Action name="page_right" />
         <Separator/>
-        <Action name="page_to_start" />
-        <Action name="page_to_end" />
-        <Separator/>
         <Action name="fullscreen" />
         <Action name="options_show_menubar" />
     </ToolBar>
@@ -23,10 +20,11 @@
             <Action name="page_to_end" />
         </Menu>
         <Menu name="view"><text>&amp;View</text>
+            <Action name="fullscreen" />
+            <Separator/>
             <Action name="zoom_toggle" />
             <Action name="zoom_in" />
             <Action name="zoom_out" />
-            <Separator/>
             <Action name="single_page" />
             <Action name="comics_view" />
             <Action name="manga_view" />

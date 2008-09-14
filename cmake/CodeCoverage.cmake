@@ -8,7 +8,7 @@ set(COVERAGE_LIBRARY gcov)
 
 # Clean the coverage data files when rebuilding
 # TODO only do it when relinked
-set(gcov_files "settings.gcda")
+set(gcov_files "settings.gcda" "${CMAKE_PROJECT_NAME}_automoc.gcda")
 
 foreach(src ${yomikata_SRCS})
     string(REGEX REPLACE ".cpp$" ".gcda" src ${src})

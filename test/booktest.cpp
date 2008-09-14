@@ -56,6 +56,15 @@ void BookTest::simple()
     PAIRED(5, 4);
 
     delete _book;
+
+    // Test a one page book
+    _book = new Book(1);
+
+    // No paired pages
+    PAIRED(0, -1);
+    CURRENT(0, -1);
+
+    delete _book;
     _book = NULL;
 }
 
@@ -267,6 +276,40 @@ void BookTest::dualPast()
     CURRENT(9, 10);
 
     delete _book;
+
+    // Use a medium book
+    _book = new Book(11);
+
+    // Page forward a bit
+    _book->next();
+    _book->next();
+    _book->next();
+    CURRENT(6, 7);
+
+    // Learn about a dual page from before
+    _book->setDual(4);
+
+    // The current parity will not change
+    CURRENT(6, 7);
+    PAIRED(0, 1);
+    PAIRED(2, 3);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+
+    // Set one from the previous section
+    _book->setDual(0);
+
+    // Other parity changes, not the current
+    CURRENT(6, 7);
+    PAIRED(0, -1);
+    PAIRED(1, 2);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+
+    delete _book;
     _book = NULL;
 }
 
@@ -440,6 +483,8 @@ void BookTest::persistentParity()
  * - paging backward, a dual page is learned to be the first page of the pair,
  *   and the following section is compressed to a size of two, changing the
  *   current pages
+ *
+ * Note: It is impossible to do two collapses at once. ("p p xp p")
  */
 void BookTest::neverStranded()
 {
@@ -498,8 +543,6 @@ void BookTest::neverStranded()
     PAIRED(12, 13);
     PAIRED(14, -1);
 
-    /// @todo test double-stranding
-
     delete _book;
     _book = NULL;
 }
@@ -507,9 +550,281 @@ void BookTest::neverStranded()
 /**
  * Test that shifting forward works.
  */
+void BookTest::shifting()
+{
+    // Simple book
+    _book = new Book(8);
+
+    // Shift
+    _book->shiftNext();
+    CURRENT(1, 2);
+    PAIRED(0, -1);
+    PAIRED(1, 2);
+    PAIRED(3, 4);
+    PAIRED(5, 6);
+    PAIRED(7, -1);
+
+    // Shift
+    _book->shiftNext();
+    CURRENT(2, 3);
+    PAIRED(0, 1);
+    PAIRED(2, 3);
+    PAIRED(4, 5);
+    PAIRED(6, 7);
+
+    // Shift
+    _book->shiftNext();
+    CURRENT(3, 4);
+    PAIRED(0, -1);
+    PAIRED(1, 2);
+    PAIRED(3, 4);
+    PAIRED(5, 6);
+    PAIRED(7, -1);
+
+    // Page back
+    _book->previous();
+    CURRENT(1, 2);
+    _book->previous();
+    CURRENT(0, -1);
+
+    // Set a dual page
+    _book->setDual(4);
+
+    // Shift through it
+    _book->shiftNext();
+    CURRENT(0, 1);
+    PAIRED(0, 1);
+    PAIRED(2, 3);
+    PAIRED(4, -1);
+    PAIRED(5, 6);
+    PAIRED(7, -1);
+    _book->shiftNext();
+    CURRENT(1, 2);
+    PAIRED(0, -1);
+    PAIRED(1, 2);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, 6);
+    PAIRED(7, -1);
+    _book->shiftNext();
+    CURRENT(2, 3);
+    _book->shiftNext();
+    CURRENT(4, -1);
+    _book->shiftNext();
+    CURRENT(5, 6);
+    PAIRED(0, 1);
+    PAIRED(2, 3);
+    PAIRED(4, -1);
+    PAIRED(5, 6);
+    PAIRED(7, -1);
+    _book->shiftNext();
+    CURRENT(6, 7);
+    PAIRED(0, 1);
+    PAIRED(2, 3);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+
+    delete _book;
+    _book = NULL;
+}
+/**
+ * Test that shifting always allows all page pairings to be seen.
+ */
+void BookTest::shiftingCoverage()
+{
+    // Size 3 book
+    _book = new Book(3);
+    CURRENT(0, 1);
+
+    // Shift
+    _book->shiftNext();
+    CURRENT(1, 2);
+
+    // Go back
+    _book->previous();
+    CURRENT(0, -1);
+
+    // Go forward
+    _book->next();
+    CURRENT(1, 2);
+
+    // Go back, then shift
+    _book->previous();
+    _book->shiftNext();
+    CURRENT(0, 1);
+
+    // Go next
+    _book->next();
+    CURRENT(2, -1);
+
+    // Size 4 book
+    delete _book;
+    _book = new Book(4);
+    CURRENT(0, 1);
+
+    // Shift
+    _book->shiftNext();
+    CURRENT(1, 2);
+
+    // Go forward and back
+    _book->next();
+    CURRENT(3, -1);
+    _book->previous();
+    _book->previous();
+    CURRENT(0, -1);
+
+    // Go forward, then shift
+    _book->next();
+    CURRENT(1, 2);
+    _book->shiftNext();
+    CURRENT(2, 3);
+
+    // Go back
+    _book->previous();
+    CURRENT(0, 1);
+
+    delete _book;
+    _book = NULL;
+}
 
 /**
  * Test that past shifts are remembered.
  */
+void BookTest::currentDualWithShifting()
+{
+    // Simple book
+    _book = new Book(6);
+
+    // Shift
+    _book->shiftNext();
+    CURRENT(1, 2);
+
+    // Set other page dual
+    _book->setDual(1);
+    CURRENT(2, -1);
+
+    // Shift forward
+    _book->shiftNext();
+    CURRENT(2, 3);
+
+    // Set other page dual again
+    _book->setDual(2);
+    CURRENT(3, -1);
+
+    // Shift forward
+    _book->shiftNext();
+    CURRENT(3, 4);
+
+    // Set primary page dual
+    _book->setDual(4);
+    CURRENT(4, -1);
+
+    delete _book;
+    _book = NULL;
+}
+
+/**
+ * Test that past shifts are remembered.
+ */
+void BookTest::persistentShiftedParity()
+{
+    // Use a big book
+    _book = new Book(11);
+
+    // Page forward a bit
+    CURRENT(0, 1);
+    _book->next();
+    CURRENT(2, 3);
+    _book->next();
+    CURRENT(4, 5);
+    _book->shiftNext();
+    CURRENT(5, 6);
+
+    // Learn about a dual page from before
+    _book->setDual(4);
+
+    // The current parity will not change
+    CURRENT(5, 6);
+    PAIRED(0, -1);
+    PAIRED(1, 2);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, 6);
+    PAIRED(7, 8);
+    PAIRED(9, 10);
+
+    // Offset this section
+    _book->shiftNext();
+    CURRENT(6, 7);
+    PAIRED(0, -1);
+    PAIRED(1, 2);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+    PAIRED(8, 9);
+    PAIRED(10, -1);
+
+    // Go back to the start of the book
+    _book->previous();
+    _book->previous();
+    _book->previous();
+    _book->previous();
+    _book->shiftNext();
+    _book->previous();
+    CURRENT(0, 1);
+
+    // Past even page doesn't change parity
+    _book->setDual(1);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, 3);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+    PAIRED(8, 9);
+    PAIRED(10, -1);
+
+    // Past odd page doesn't change parity
+    _book->setDual(2);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, -1);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+    PAIRED(8, 9);
+    PAIRED(10, -1);
+
+    // Future even page doesn't change parity
+    _book->setDual(8);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, -1);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, -1);
+    PAIRED(6, 7);
+    PAIRED(8, -1);
+    PAIRED(9, 10);
+
+    // Future odd page changes parity because a section size is
+    // reduced to two
+    _book->setDual(7);
+    PAIRED(0, -1);
+    PAIRED(1, -1);
+    PAIRED(2, -1);
+    PAIRED(3, -1);
+    PAIRED(4, -1);
+    PAIRED(5, 6);
+    PAIRED(7, -1);
+    PAIRED(8, -1);
+    PAIRED(9, 10);
+
+    delete _book;
+    _book = NULL;
+}
 
 #include "booktest.moc"
