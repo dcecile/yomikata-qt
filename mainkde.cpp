@@ -1,14 +1,9 @@
 #include <KApplication>
 #include <KAboutData>
 #include <KCmdLineArgs>
-#include <KLocalizedString>
-#include <KDebug>
-#include <QTextCodec>
-#include <QByteArray>
-#include <QString>
 
 #include "mainwindowkde.h"
-#include "mainwindowqt.h"
+#include "debug.h"
 
 #ifndef UNIT_TESTING
 int main (int argc, char *argv[])
@@ -40,7 +35,7 @@ int application_main (int argc, char *argv[])
     if (args->count() == 1)
     {
         initialArg = args->arg(0);
-        kDebug()<<"Passed file:"<<initialArg;
+        debug()<<"Passed file:"<<initialArg;
 
     }
     else if (args->count() > 1)
