@@ -6,6 +6,9 @@ set(yomikata_SRCS
 
     mainwindow.cpp
 
+    debugwidget.cpp
+    debugpageitem.cpp
+
     book.cpp
     revision.cpp
 )
@@ -65,11 +68,12 @@ else()
 endif()
 
 # Development options
+# TODO figure out how to set the install directory by default
 if(DEV_MODE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
-    set(CMAKE_INSTALL_PREFIX /usr
+    set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install
         CACHE STRING
-        "Install p!ath prefix, prepended onto install directories.")
+        "Install path prefix, prepended onto install directories.")
 endif()
 
 # Unit test build

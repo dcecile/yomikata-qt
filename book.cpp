@@ -360,6 +360,7 @@ int Book::pairedPage(int page) const
     Q_ASSERT(page >= 0 && page < _numPages);
 
     const Pair &pair = _info[page].pair;
+
     if (pair == Previous)
     {
         return page - 1;
@@ -374,4 +375,14 @@ int Book::pairedPage(int page) const
     }
 }
 
+int Book::pairedPageOffset(int page) const
+{
+    Q_ASSERT(page >= 0 && page < _numPages);
 
+    return (int) _info[page].pair;
+}
+
+int Book::numPages() const
+{
+    return _numPages;
+}

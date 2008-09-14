@@ -55,6 +55,9 @@ public:
     int page1() const;
 
     int pairedPage(int page) const;
+    int pairedPageOffset(int page) const;
+
+    int numPages() const;
 
 private:
     enum Pair {Previous = -1, None, Next};

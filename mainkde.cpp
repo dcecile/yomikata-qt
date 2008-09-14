@@ -6,9 +6,9 @@
 #include "debug.h"
 
 #ifndef UNIT_TESTING
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 #else
-int application_main (int argc, char *argv[])
+int application_main(int argc, char *argv[])
 #endif
 {
     KAboutData aboutData("yomikata",
@@ -43,7 +43,8 @@ int application_main (int argc, char *argv[])
         args->usageError(i18n("Only one initial file or directory is supported."));
     }
 
-    MainWindow *window = new MainWindowQt(initialArg);
+    // KDE destroys main windows automatically
+    MainWindowKde *window = new MainWindowKde(initialArg);
     window->show();
 
     return app.exec();

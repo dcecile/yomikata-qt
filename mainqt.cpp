@@ -10,8 +10,9 @@ int application_main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    MainWindow *window = new MainWindowQt("");
-    window->show();
+    // Qt doesn't destory main windows automatically
+    MainWindowQt window("");
+    window.show();
 
     return app.exec();
 }

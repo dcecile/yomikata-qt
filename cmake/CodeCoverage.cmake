@@ -8,14 +8,18 @@ set(COVERAGE_LIBRARY gcov)
 
 # Clean the coverage data files when rebuilding
 # TODO only do it when relinked
+# TODO figure strange .cpp.o thing
 set(gcov_files "settings.gcda" "${CMAKE_PROJECT_NAME}_automoc.gcda")
 
 foreach(src ${yomikata_SRCS})
-    string(REGEX REPLACE ".cpp$" ".gcda" src ${src})
+    set(src "${src}.gcda")
+    set(gcov_files ${gcov_files} ${src})
+    string(REGEX REPLACE ".cpp.gcda$" ".gcda" src ${src})
     set(gcov_files ${gcov_files} ${src})
 endforeach()
 
 add_custom_target(clean_cov ALL
+    COMMAND echo Removing ${gcov_files}
     COMMAND ${CMAKE_COMMAND} -E remove ${gcov_files}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CMAKE_PROJECT_NAME}.dir/
     VERBATIM

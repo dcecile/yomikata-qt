@@ -6,11 +6,13 @@
 #include <QMouseEvent>
 
 #include "debug.h"
+#include "debugwidget.h"
 
 MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
-    : MainWindowAncestor(parent)
+    : MainWindowAncestor(parent), _book(11)
 {
-    setCentralWidget(new QLabel("Hello world", this));
+    _book.shiftNext();
+    setCentralWidget(new DebugWidget(_book, this));
 
     // Start opening the initial file
     if (!initialArg.isEmpty())

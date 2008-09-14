@@ -9,6 +9,8 @@
     typedef KXmlGuiWindow MainWindowAncestor;
 #endif
 
+#include "book.h"
+
 class MainWindow: public MainWindowAncestor
 {
     Q_OBJECT
@@ -27,6 +29,8 @@ private:
     void mousePressEvent(QMouseEvent *event);
 
 private:
+    Book _book;
+
     bool _pageForwardEnabled;
     bool _pageBackwardEnabled;
     bool _zoomToggleEnabled;
