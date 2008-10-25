@@ -2,17 +2,19 @@ project(yomikata)
 
 # Source files
 set(yomikata_SRCS
-    debug.cpp
-
     mainwindow.cpp
+
+    steward.cpp
+    artificer.cpp
+    strategist.cpp
+    book.cpp
+    index.cpp
+    projector.cpp
 
     debugwidget.cpp
     debugpageitem.cpp
 
-    
-
-    book.cpp
-    revision.cpp
+    debug.cpp
 )
 
 set(yomikata_qt_SRCS
@@ -87,6 +89,7 @@ endif()
 if(QT_ONLY)
     # Qt-only build steps
     qt4_automoc(${yomikata_SRCS})
+    qt4_add_resources(yomikata_SRCS yomikata.qrc)
     add_executable(yomikata ${yomikata_SRCS})
     target_link_libraries(yomikata ${QT_LIBRARIES} ${COVERAGE_LIBRARY})
     set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})

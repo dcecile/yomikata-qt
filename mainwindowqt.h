@@ -11,6 +11,8 @@ public:
     MainWindowQt(const QString &initialArg, QWidget *parent = NULL);
     ~MainWindowQt();
 
+private slots:
+    void open();
 };
 
 #endif

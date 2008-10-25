@@ -24,6 +24,10 @@ DebugWidget::DebugWidget(const Book &book, QWidget *parent)
     setInteractive(false);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    // No need to expand
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    setMaximumHeight(100);
 }
 
 DebugWidget::~DebugWidget()
@@ -35,6 +39,12 @@ void DebugWidget::setup()
     // Empty the scene
     _scene.clear();
     _pages.clear();
+
+    // Don't do anything if there's no pages
+    if (_book.numPages() == 0)
+    {
+        return;
+    }
 
     // Create pages
     int pos = 0;
@@ -69,7 +79,7 @@ void DebugWidget::setup()
 
 QSize DebugWidget::sizeHint() const
 {
-    return QSize(200, 800);
+    return QSize(300, 50);
 }
 
 void DebugWidget::resizeEvent(QResizeEvent *)

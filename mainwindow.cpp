@@ -1,19 +1,33 @@
 #include "mainwindow.h"
 
+#include <QVBoxLayout>
 #include <QLabel>
 #include <QDir>
 #include <QWheelEvent>
 #include <QMouseEvent>
+#include <QSplitter>
 
 #include "debug.h"
-#include "debugwidget.h"
+#include "steward.h"
 
 MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
-    : MainWindowAncestor(parent), _book(11)
+    : MainWindowAncestor(parent)
 {
-    _book.shiftNext();
-    _book.setDual(5);
-    setCentralWidget(new DebugWidget(_book, this));
+    // Make the steward
+    _steward = new Steward(this);
+
+    QSplitter *splitter = new QSplitter(Qt::Vertical, this);
+    setCentralWidget(splitter);
+
+    // Add the projector
+    QWidget *projector = _steward->projector();
+    projector->setParent(this);
+    splitter->addWidget(projector);
+
+    // Add the debug widget
+    QWidget *debugWidget = _steward->debugWidget();
+    debugWidget->setParent(this);
+    splitter->addWidget(debugWidget);
 
     // Start opening the initial file
     if (!initialArg.isEmpty())
@@ -30,8 +44,6 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     }
 
     // Enable things
-    _pageForwardEnabled = true;
-    _pageBackwardEnabled = true;
     _zoomToggleEnabled = true;
     _zoomInEnabled = true;
     _zoomOutEnabled = true;
@@ -39,16 +51,18 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    debug()<<"~MainWindow()";
 }
 
 QSize MainWindow::sizeHint() const
 {
-    return QSize(700, 300);
+    return QSize(800, 600);
 }
 
-void MainWindow::setSource(const QString &initialFile)
+void MainWindow::setSource(const QString &filename)
 {
-    debug()<<"Opening file"<<initialFile;
+    debug()<<"Opening file"<<filename;
+    _steward->reset(filename);
 }
 
 void MainWindow::wheelEvent(QWheelEvent *event)
@@ -76,15 +90,15 @@ void MainWindow::wheelEvent(QWheelEvent *event)
     }
     else
     {
-        if (event->delta() > 0 && _book.isPreviousEnabled())
+        if (event->delta() > 0)
         {
             // Page back
-            _book.previous();
+            _steward->previous();
         }
-        else if (event->delta() < 0 && _book.isNextEnabled())
+        else if (event->delta() < 0)
         {
             // Page forward
-            _book.next();
+            _steward->next();
         }
         else
         {
@@ -97,9 +111,9 @@ void MainWindow::wheelEvent(QWheelEvent *event)
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
     // Middle mouse triggers paging forward one page
-    if (event->button() == Qt::MidButton && _book.isNextEnabled())
+    if (event->button() == Qt::MidButton)
     {
-        _book.shiftNext();
+        _steward->shiftNext();
     }
 
     // Right mouse toggles zoom

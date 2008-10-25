@@ -9,7 +9,7 @@ set(COVERAGE_LIBRARY gcov)
 # Clean the coverage data files when rebuilding
 # TODO only do it when relinked
 # TODO figure strange .cpp.o thing
-set(gcov_files "settings.gcda" "${CMAKE_PROJECT_NAME}_automoc.gcda")
+set(gcov_files "settings.gcda" "${CMAKE_PROJECT_NAME}_automoc.gcda" "qrc_${CMAKE_PROJECT_NAME}.cxx.gcda")
 
 foreach(src ${yomikata_SRCS})
     set(src "${src}.gcda")

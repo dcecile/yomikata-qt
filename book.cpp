@@ -5,8 +5,6 @@
 Book::Book(int numPages, QObject *parent)
     : QObject(parent)
 {
-    Q_ASSERT(numPages > 0);
-
     reset(numPages);
 }
 

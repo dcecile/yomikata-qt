@@ -11,6 +11,8 @@
 
 #include "book.h"
 
+class Steward;
+
 class MainWindow: public MainWindowAncestor
 {
     Q_OBJECT
@@ -22,17 +24,14 @@ public:
     QSize sizeHint() const;
 
 protected:
-    void setSource(const QString &initialFile);
+    void setSource(const QString &filename);
 
 private:
     void wheelEvent(QWheelEvent *event);
     void mousePressEvent(QMouseEvent *event);
 
 private:
-    Book _book;
-
-    bool _pageForwardEnabled;
-    bool _pageBackwardEnabled;
+    Steward *_steward;
     bool _zoomToggleEnabled;
     bool _zoomInEnabled;
     bool _zoomOutEnabled;
