@@ -7,7 +7,7 @@
 class DebugPageItem: public QGraphicsRectItem
 {
     public:
-        DebugPageItem(qreal x, qreal y, int page);
+        DebugPageItem(qreal x, qreal y, bool active, bool dual, int page);
         ~DebugPageItem();
 
     private:

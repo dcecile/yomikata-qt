@@ -12,6 +12,7 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     : MainWindowAncestor(parent), _book(11)
 {
     _book.shiftNext();
+    _book.setDual(5);
     setCentralWidget(new DebugWidget(_book, this));
 
     // Start opening the initial file
@@ -42,7 +43,7 @@ MainWindow::~MainWindow()
 
 QSize MainWindow::sizeHint() const
 {
-    return QSize(300, 200);
+    return QSize(700, 300);
 }
 
 void MainWindow::setSource(const QString &initialFile)
@@ -75,17 +76,15 @@ void MainWindow::wheelEvent(QWheelEvent *event)
     }
     else
     {
-        if (event->delta() > 0 && _pageBackwardEnabled)
+        if (event->delta() > 0 && _book.isPreviousEnabled())
         {
             // Page back
-            debug()<<"Previous";
-
+            _book.previous();
         }
-        else if (event->delta() < 0 && _pageForwardEnabled)
+        else if (event->delta() < 0 && _book.isNextEnabled())
         {
             // Page forward
-            debug()<<"Next";
-
+            _book.next();
         }
         else
         {
@@ -98,8 +97,9 @@ void MainWindow::wheelEvent(QWheelEvent *event)
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
     // Middle mouse triggers paging forward one page
-    if (event->button() == Qt::MidButton && _pageForwardEnabled)
+    if (event->button() == Qt::MidButton && _book.isNextEnabled())
     {
+        _book.shiftNext();
     }
 
     // Right mouse toggles zoom

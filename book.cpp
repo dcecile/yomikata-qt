@@ -2,10 +2,16 @@
 
 #include <QDebug>
 
-Book::Book(int numPages)
+Book::Book(int numPages, QObject *parent)
+    : QObject(parent)
 {
     Q_ASSERT(numPages > 0);
 
+    reset(numPages);
+}
+
+void Book::reset(int numPages)
+{
     // Set the number of pages
     _numPages = numPages;
 
@@ -73,6 +79,9 @@ void Book::next()
 
     // Going forward
     _importantPageIsFirst = true;
+
+    // Notify changed
+    emit changed();
 }
 
 void Book::previous()
@@ -97,6 +106,9 @@ void Book::previous()
 
     // Going backward
     _importantPageIsFirst = false;
+
+    // Notify changed
+    emit changed();
 }
 
 /**
@@ -107,6 +119,8 @@ void Book::previous()
  */
 void Book::shiftNext()
 {
+    Q_ASSERT(_page0 < _numPages - 1 && _page1 < _numPages - 1);
+
     bool shift = true;
 
     // Check that not displaying a dual page
@@ -190,6 +204,9 @@ void Book::shiftNext()
     {
         _info[i].pair = None;
     }
+
+    // Notify changed
+    emit changed();
 }
 
 /**
@@ -343,6 +360,15 @@ void Book::setDual(int page)
             _info[_page1].pair = Previous;
         }
     }
+
+    // Notify changed
+    emit changed();
+}
+
+bool Book::isDual(int page) const
+{
+    Q_ASSERT(page >= 0 && page < _numPages);
+    return _info[page].dual;
 }
 
 int Book::page0() const
@@ -386,3 +412,15 @@ int Book::numPages() const
 {
     return _numPages;
 }
+
+bool Book::isNextEnabled() const
+{
+    return _page0 < _numPages - 1 && _page1 < _numPages - 1;
+}
+
+bool Book::isPreviousEnabled() const
+{
+    return _page0 > 0;
+}
+
+#include "book.moc"

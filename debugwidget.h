@@ -24,6 +24,10 @@ class DebugWidget : public QGraphicsView
 
     private:
         void resizeEvent(QResizeEvent *event);
+        void mousePressEvent(QMouseEvent *event);
+
+    private slots:
+        void setup();
 
     private:
         const Book &_book;

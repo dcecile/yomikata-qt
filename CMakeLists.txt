@@ -9,6 +9,8 @@ set(yomikata_SRCS
     debugwidget.cpp
     debugpageitem.cpp
 
+    
+
     book.cpp
     revision.cpp
 )
@@ -33,9 +35,6 @@ set(test_CLASSES
     book
 )
 
-# TODO add install commands, and make an nsis script that uses the files
-#  in the w/e install dir
-# TODO make kde optional
 # TODO install into the build directory by default
 # TODO add clean_doc and clean_lcov to the clean target
 
@@ -68,9 +67,8 @@ else()
 endif()
 
 # Development options
-# TODO figure out how to set the install directory by default
 if(DEV_MODE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -O0 -ggdb")
     set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install
         CACHE STRING
         "Install path prefix, prepended onto install directories.")

@@ -1,6 +1,8 @@
 #ifndef BOOK_H
 #define BOOK_H
 
+#include <QObject>
+
 #include <vector>
 
 using std::vector;
@@ -39,17 +41,22 @@ using std::vector;
  * @todo shifting
  * @todo notify on unexpected current page change
  */
-class Book
+class Book : public QObject
 {
+    Q_OBJECT
+
 public:
-    Book(int numPages);
+    Book(int numPages, QObject *parent = NULL);
     ~Book();
+
+    void reset(int numPages);
 
     void next();
     void previous();
     void shiftNext();
 
     void setDual(int page);
+    bool isDual(int page) const;
 
     int page0() const;
     int page1() const;
@@ -58,6 +65,12 @@ public:
     int pairedPageOffset(int page) const;
 
     int numPages() const;
+
+    bool isNextEnabled() const;
+    bool isPreviousEnabled() const;
+
+signals:
+    void changed();
 
 private:
     enum Pair {Previous = -1, None, Next};
