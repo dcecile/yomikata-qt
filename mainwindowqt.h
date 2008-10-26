@@ -13,6 +13,7 @@ public:
 
 private slots:
     void open();
+    void fullscreen(bool toggled);
 };
 
 #endif

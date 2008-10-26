@@ -51,6 +51,9 @@ void Book::reset(int numPages)
     {
         _info.back().pair = None;
     }
+
+    // Notify changed
+    emit changed();
 }
 
 Book::~Book()

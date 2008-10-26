@@ -17,9 +17,10 @@ public:
 
     void reset();
 
-    QRect pageLayout(int indexer);
+    QRect pageLayout(int index);
 
-    void setFullPageSize(QSize size);
+    bool isFullPageSizeKnown(int index);
+    void setFullPageSize(int index, QSize size);
 
     void setViewport(const QSize &size);
     QSize viewport() const;

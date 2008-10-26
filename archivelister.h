@@ -40,6 +40,9 @@ private:
     QString cleanZipFilename(const QString &filename);
 
 private:
+    static const int KILL_WAIT = 100;
+
+private:
     FileClassification::ArchiveType _archiveType;
     QString _archivePath;
 

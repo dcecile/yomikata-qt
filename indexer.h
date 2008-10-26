@@ -25,6 +25,7 @@ public:
     void reset(const QString &filename);
 
     int numPages() const;
+    QString filename() const;
     QString pageName(int indexer) const;
 
 signals:
@@ -45,6 +46,7 @@ private:
     };
 
 private:
+    QString _filename;
     vector<FileInfo> _files;
 
     ArchiveLister *_archiveLister;

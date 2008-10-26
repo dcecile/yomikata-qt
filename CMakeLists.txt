@@ -13,6 +13,7 @@ set(yomikata_SRCS
 
     archivelister.cpp
     fileclassification.cpp
+    decodethread.cpp
 
     debugwidget.cpp
     debugpageitem.cpp
@@ -42,6 +43,7 @@ set(test_CLASSES
 
 # TODO install into the build directory by default
 # TODO add clean_doc and clean_lcov to the clean target
+# TODO enable warnings like KDE does
 
 # Minimum CMake version
 cmake_minimum_required(VERSION 2.6)

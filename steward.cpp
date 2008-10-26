@@ -15,20 +15,22 @@ Steward::Steward(QObject *parent)
     _book(*new Book(0, this)),
     _indexer(*new Indexer(this)),
     _strategist(*new Strategist(_book, this)),
-    _artificer(*new Artificer(_strategist, this)),
+    _artificer(*new Artificer(_indexer, _strategist, this)),
     _projector(*new Projector(NULL)),
     _debugWidget(new DebugWidget(_book, NULL))
 {
     // Connect
     connect(&_indexer, SIGNAL(built()), SLOT(indexerBuilt()));
-    connect(&_book, SIGNAL(changed()), SLOT(pageChanged()));
     connect(&_projector, SIGNAL(resized(const QSize&)), SLOT(viewportResized(const QSize&)));
+    connect(&_artificer, SIGNAL(pageDecoded(int, QPixmap)), SLOT(decodeDone(int, QPixmap)));
 
     _buildingIndexer = false;
 }
 
 Steward::~Steward()
 {
+    // Stop the threads first
+    delete &_artificer;
 }
 
 QWidget *Steward::projector()
@@ -61,7 +63,7 @@ void Steward::reset(const QString &filename)
 
 void Steward::indexerBuilt()
 {
-    _buildingIndexer = true;
+    _buildingIndexer = false;
 
     // Don't do anything with an empty book
     if (_indexer.numPages() == 0)
@@ -75,19 +77,7 @@ void Steward::indexerBuilt()
     _strategist.reset();
 
     // Show the first two pages
-    _projector.showLoading0(_strategist.pageLayout(0));
-
-    if (_book.numPages() > 1)
-    {
-        _projector.showLoading1(_strategist.pageLayout(1));
-    }
-
-    _artificer.decodePage(0);
-
-    if (_book.numPages() > 1)
-    {
-        _artificer.decodePage(1);
-    }
+    pageChanged();
 }
 
 void Steward::next()
@@ -95,6 +85,7 @@ void Steward::next()
     if (_book.isNextEnabled())
     {
         _book.next();
+        pageChanged();
     }
 }
 
@@ -103,6 +94,7 @@ void Steward::previous()
     if (_book.isPreviousEnabled())
     {
         _book.previous();
+        pageChanged();
     }
 }
 
@@ -111,6 +103,7 @@ void Steward::shiftNext()
     if (_book.isNextEnabled())
     {
         _book.shiftNext();
+        pageChanged();
     }
 }
 
@@ -120,6 +113,8 @@ void Steward::pageChanged()
     int current0 = _book.page0();
     int current1 = _book.page1();
 
+    _projector.showBlank();
+
     _projector.showLoading0(_strategist.pageLayout(current0));
 
     if (current1 >= 0)
@@ -127,23 +122,22 @@ void Steward::pageChanged()
         _projector.showLoading1(_strategist.pageLayout(current1));
     }
 
-    _artificer.decodePage(current0);
-
-    if (current1 >= 0)
-    {
-        _artificer.decodePage(current1);
-    }
+    _artificer.decodePages(current0, current1);
 }
 
-void Steward::decodeDone(int indexer, QPixmap page)
+/**
+ * @todo Manage request queue better for failed decodes
+ *   (know if each page is correct)
+ */
+void Steward::decodeDone(int index, QPixmap page)
 {
     // Display the page if needed
     int current0 = _book.page0();
     int current1 = _book.page1();
 
-    if (indexer == current0)
+    if (index == current0)
     {
-        QRect layout = _strategist.pageLayout(indexer);
+        QRect layout = _strategist.pageLayout(index);
 
         // Show the page if it's correct
         if (page.size() == layout.size())
@@ -153,22 +147,22 @@ void Steward::decodeDone(int indexer, QPixmap page)
         // Or try decoding again, if needed
         else
         {
-            _artificer.decodePage(indexer);
+            _artificer.decodePages(current0, current1);
         }
     }
-    else if (indexer == current1)
+    else if (index == current1)
     {
-        QRect layout = _strategist.pageLayout(indexer);
+        QRect layout = _strategist.pageLayout(index);
 
         // Show the page if it's correct
         if (page.size() == layout.size())
         {
-            _projector.showPage0(layout, page);
+            _projector.showPage1(layout, page);
         }
         // Or try decoding again, if needed
         else
         {
-            _artificer.decodePage(indexer);
+            _artificer.decodePages(current0, current1);
         }
     }
 }

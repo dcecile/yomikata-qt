@@ -72,6 +72,7 @@ void MainWindowKde::open()
 void MainWindowKde::toggleFullScreen(bool checked)
 {
     debug()<<"Fullcreen toggled"<<checked;
+
     if (checked)
     {
         showFullScreen();

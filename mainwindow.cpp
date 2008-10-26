@@ -25,9 +25,10 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     splitter->addWidget(projector);
 
     // Add the debug widget
-    QWidget *debugWidget = _steward->debugWidget();
-    debugWidget->setParent(this);
-    splitter->addWidget(debugWidget);
+    _debugWidget = _steward->debugWidget();
+    _debugWidget->setParent(this);
+    splitter->addWidget(_debugWidget);
+    _debugWidget->hide();
 
     // Start opening the initial file
     if (!initialArg.isEmpty())
@@ -57,6 +58,18 @@ MainWindow::~MainWindow()
 QSize MainWindow::sizeHint() const
 {
     return QSize(800, 600);
+}
+
+void MainWindow::showDebugWidget(bool toggled)
+{
+    if (toggled)
+    {
+        _debugWidget->show();
+    }
+    else
+    {
+        _debugWidget->hide();
+    }
 }
 
 void MainWindow::setSource(const QString &filename)

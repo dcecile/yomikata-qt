@@ -20,7 +20,7 @@ QRect Strategist::pageLayout(int indexer)
     QSize size(_viewport.width() / 2, _viewport.height());
 
     // Offset the right page
-    if (_book.pairedPageOffset(indexer) == -1)
+    if (_book.pairedPageOffset(indexer) == 1)
     {
         return QRect(_viewport.width() / 2, 0, _viewport.width() / 2, _viewport.height());
     }
@@ -31,8 +31,14 @@ QRect Strategist::pageLayout(int indexer)
     }
 }
 
-void Strategist::setFullPageSize(QSize size)
+bool Strategist::isFullPageSizeKnown(int index)
 {
+    return false;
+}
+
+void Strategist::setFullPageSize(int, QSize size)
+{
+    Q_UNUSED(size);
 }
 
 void Strategist::setViewport(const QSize &size)

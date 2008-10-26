@@ -22,7 +22,7 @@ public:
     void showPage0(const QRect &rect, QPixmap image);
     void showPage1(const QRect &rect, QPixmap image);
 
-    int heightForWidth(int width);
+    int heightForWidth(int width) const;
 
 signals:
     void resized(const QSize &size);

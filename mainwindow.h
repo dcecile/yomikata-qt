@@ -23,6 +23,9 @@ public:
 
     QSize sizeHint() const;
 
+protected slots:
+    void showDebugWidget(bool toggled);
+
 protected:
     void setSource(const QString &filename);
 
@@ -32,6 +35,7 @@ private:
 
 private:
     Steward *_steward;
+    QWidget *_debugWidget;
     bool _zoomToggleEnabled;
     bool _zoomInEnabled;
     bool _zoomOutEnabled;

@@ -57,7 +57,7 @@ QWidget *Projector::createLoadingWidget()
     return loading;
 }
 
-int Projector::heightForWidth(int width)
+int Projector::heightForWidth(int width) const
 {
     return width * 3 / 4;
 }
@@ -69,12 +69,10 @@ QSize Projector::sizeHint() const
 
 void Projector::showBlank()
 {
-    /*
     _loading0->hide();
     _loading1->hide();
     _page0->hide();
     _page1->hide();
-    */
 }
 
 void Projector::showLoading0(const QRect &rect)

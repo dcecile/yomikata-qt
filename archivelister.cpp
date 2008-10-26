@@ -35,7 +35,7 @@ ArchiveLister::~ArchiveLister()
         _process.terminate();
 
         // Wait kindly for it to finish
-        bool finished = _process.waitForFinished(0);
+        bool finished = _process.waitForFinished(KILL_WAIT);
 
         // Kill the process if it's still running
         if (!finished)
