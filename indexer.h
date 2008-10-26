@@ -3,12 +3,17 @@
 
 #include <QObject>
 
+#include <QTime>
+
 #include <vector>
 
 using std::vector;
 
 class ArchiveLister;
 
+/**
+ * @todo Use QByteArray for the filenames (to overcome text codec errors)
+ */
 class Indexer : public QObject
 {
     Q_OBJECT
@@ -36,13 +41,14 @@ private:
         int compressedSize;
         int uncompressedSize;
 
-        bool operator < (const FileInfo &other);
+        bool operator < (const FileInfo &other) const;
     };
 
 private:
     vector<FileInfo> _files;
 
     ArchiveLister *_archiveLister;
+    QTime _listingTime;
 };
 
 #endif

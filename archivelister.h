@@ -4,7 +4,6 @@
 #include <QObject>
 
 #include <QProcess>
-#include <QTime>
 
 #include <vector>
 
@@ -14,6 +13,7 @@ using std::vector;
 
 /**
  * @todo Cancel if being deconstructed.
+ * @todo Allow parsing/program errors.
  */
 class ArchiveLister : public QObject
 {
@@ -37,14 +37,11 @@ private slots:
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
-    void cleanZipFilenames();
+    QString cleanZipFilename(const QString &filename);
 
 private:
     FileClassification::ArchiveType _archiveType;
     QString _archivePath;
-
-    QStringList _fileList;
-    vector<int> _fileSizes;
 
     QProcess _process;
 
@@ -56,7 +53,7 @@ private:
     bool _filenameLine;
     QByteArray _currentInputLine;
 
-    QTime _listingTime;
+    QString _rarFileName;
 };
 
 #endif

@@ -24,6 +24,8 @@ MainWindowQt::~MainWindowQt()
 
 /**
  * @todo Get native KDE dialogs working like QtDesigner
+ * @todo Open at current file
+ * @todo Allow "no file", meaning the directory
  */
 void MainWindowQt::open()
 {

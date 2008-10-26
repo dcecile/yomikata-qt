@@ -1,6 +1,11 @@
 #include "indexer.h"
 
+#include <algorithm>
+
 #include "archivelister.h"
+#include "debug.h"
+
+using std::sort;
 
 Indexer::Indexer(QObject *parent)
     : QObject(parent)
@@ -33,6 +38,9 @@ void Indexer::reset(const QString &filename)
 
     // Start it
     _archiveLister->start();
+
+    // Start timing
+    _listingTime.restart();
 }
 
 int Indexer::numPages() const
@@ -48,10 +56,32 @@ QString Indexer::pageName(int indexer) const
 
 void Indexer::entryFound(const QString &filename, int compressedSize, int uncompressedSize)
 {
+    // Add the entry to the list
+    FileInfo temp;
+    temp.name = filename;
+    temp.compressedSize = compressedSize;
+    temp.uncompressedSize = uncompressedSize;
+    _files.push_back(temp);
+}
+
+bool Indexer::FileInfo::operator < (const Indexer::FileInfo &other) const
+{
+    return QString::localeAwareCompare(name, other.name) < 0;
 }
 
 void Indexer::listingFinished()
 {
+    // Deallocate the lister
+    _archiveLister->deleteLater();
+    _archiveLister = NULL;
+
+    // Sort all the entries
+    sort(_files.begin(), _files.end());
+
+    // Notify the steward
+    debug()<<"Listing finished:"<<_listingTime.elapsed()<<" ms"
+            <<"--"<<_files.size()<<"entries";
+    emit built();
 }
 
 #include "indexer.moc"

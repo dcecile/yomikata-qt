@@ -67,6 +67,7 @@ void Steward::indexerBuilt()
     if (_indexer.numPages() == 0)
     {
         _projector.showBlank();
+        return;
     }
 
     // New book size
