@@ -1,27 +1,33 @@
 #ifndef ARCHIVELISTER_H
 #define ARCHIVELISTER_H
 
-#include "lister.h"
+#include <QObject>
 
 #include <QProcess>
 #include <QTime>
 
-#include "fileclassifier.h"
+#include <vector>
+
+#include "fileclassification.h"
+
+using std::vector;
 
 /**
- * @ingroup mod_filelist
- * @brief Gets the list of files in an archive
+ * @todo Cancel if being deconstructed.
  */
-class ArchiveLister : public Lister
+class ArchiveLister : public QObject
 {
     Q_OBJECT
 
 public:
-    ArchiveLister(FileClassifier::ArchiveType archiveType, const QString &archivePath, QObject *parent);
-
-    void beginListing();
-
+    ArchiveLister(const QString &archivePath, QObject *parent);
     ~ArchiveLister();
+
+    void start();
+
+signals:
+    void entryFound(const QString &filename, int compressedSize, int uncompressedSize);
+    void finished();
 
 private slots:
     void rarOutputText();
@@ -34,7 +40,7 @@ private:
     void cleanZipFilenames();
 
 private:
-    FileClassifier::ArchiveType _archiveType;
+    FileClassification::ArchiveType _archiveType;
     QString _archivePath;
 
     QStringList _fileList;

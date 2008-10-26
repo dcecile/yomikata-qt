@@ -1,16 +1,10 @@
-#ifndef FILECLASSIFIER_H
-#define FILECLASSIFIER_H
+#ifndef FILECLASSICATION_H
+#define FILECLASSICATION_H
 
-#include <QObject>
+#include <QString>
 
-/**
- * @ingroup mod_source
- * @brief Classifies files as images or archives.
-*/
-class FileClassifier : public QObject
+class FileClassification
 {
-    Q_OBJECT
-
 public:
     enum ArchiveType {
         Tar,
@@ -29,10 +23,13 @@ public:
 private:
     static const char *IMAGE_TYPES[];
     struct ArchiveTypeInfo {
-        char *ext;
+        const char *ext;
         ArchiveType type;
     };
     static const ArchiveTypeInfo ARCHIVE_TYPES[];
+
+private:
+    FileClassification();
 };
 
 #endif

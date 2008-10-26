@@ -48,7 +48,7 @@ void MainWindowKde::open()
     // Get an existing file from the user
     QString filename = KFileDialog::getOpenFileName(
             KUrl(),
-            "*.*",//FileClassifier::getFileDialogWildcardString(),
+            "*.*",//FileClassification::getFileDialogWildcardString(),
             this,
             QString());
 

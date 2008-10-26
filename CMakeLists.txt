@@ -8,8 +8,11 @@ set(yomikata_SRCS
     artificer.cpp
     strategist.cpp
     book.cpp
-    index.cpp
+    indexer.cpp
     projector.cpp
+
+    archivelister.cpp
+    fileclassification.cpp
 
     debugwidget.cpp
     debugpageitem.cpp

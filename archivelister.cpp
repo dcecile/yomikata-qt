@@ -1,11 +1,15 @@
 #include "archivelister.h"
 
 #include <QTextCodec>
-#include <KDebug>
 
-ArchiveLister::ArchiveLister(FileClassifier::ArchiveType archiveType, const QString &archivePath, QObject *parent)
- : Lister(parent), _archiveType(archiveType), _archivePath(archivePath)
+#include "debug.h"
+
+ArchiveLister::ArchiveLister(const QString &archivePath, QObject *parent)
+    : QObject(parent)
 {
+    _archiveType = FileClassification::getArchiveType(archivePath);
+    _archivePath = archivePath;
+
     // Connect to the extracter process
     connect(&_process, SIGNAL(readyReadStandardError()),
              this, SLOT(errorText()));
@@ -20,7 +24,7 @@ ArchiveLister::~ArchiveLister()
 {
 }
 
-void ArchiveLister::beginListing()
+void ArchiveLister::start()
 {
     Q_ASSERT(_process.state() == QProcess::NotRunning);
 
@@ -36,37 +40,37 @@ void ArchiveLister::beginListing()
     QString command;
     QStringList args;
     switch (_archiveType) {
-        case FileClassifier::Tar:
+        case FileClassification::Tar:
             command = "tar";
             args<<"-tvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassifier::TarGz:
+        case FileClassification::TarGz:
             command = "tar";
             args<<"-ztvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassifier::TarBz:
+        case FileClassification::TarBz:
             command = "tar";
             args<<"--bzip2"<<"-tvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassifier::TarZ:
+        case FileClassification::TarZ:
             command = "tar";
             args<<"-Ztvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassifier::Zip:
+        case FileClassification::Zip:
             command = "unzip";
             args<<"-l"<<"-qq";
             _numFields = 3;
             _sizeField = 0;
             break;
-        case FileClassifier::Rar:
+        case FileClassification::Rar:
             command = "unrar";
             args<<"vr";
             break;
@@ -80,7 +84,7 @@ void ArchiveLister::beginListing()
                 this, SLOT(nonRarOutputText()));
     disconnect(&_process, SIGNAL(readyReadStandardOutput()),
                 this, SLOT(rarOutputText()));
-    if (_archiveType != FileClassifier::Rar) {
+    if (_archiveType != FileClassification::Rar) {
         connect(&_process, SIGNAL(readyReadStandardOutput()),
                  this, SLOT(nonRarOutputText()));
     } else {
@@ -91,7 +95,7 @@ void ArchiveLister::beginListing()
     // Start the process listing
     _process.start(command, args);
 
-    kDebug()<<"Started archive listing for"<<_archivePath;
+    debug()<<"Started archive listing for"<<_archivePath;
 }
 
 void ArchiveLister::nonRarOutputText()
@@ -162,7 +166,7 @@ void ArchiveLister::nonRarOutputText()
             // Put the name back together and trim whitespace
             QString filename = data.join(" ").trimmed();
 
-            if (FileClassifier::isImageFile(filename)) {
+            if (FileClassification::isImageFile(filename)) {
                 // This is an image file
                 //kDebug()<<"Filename length"<<filename.length();
                 _fileList<<filename;
@@ -239,7 +243,7 @@ void ArchiveLister::rarOutputText()
                     _fileList.pop_back();
 
                 // Check that the file is an image
-                } else if (!FileClassifier::isImageFile(_fileList.back())) {
+                } else if (!FileClassification::isImageFile(_fileList.back())) {
                     _fileList.pop_back();
 
                 // If it is an image, add it's size to the list
@@ -262,12 +266,12 @@ void ArchiveLister::rarOutputText()
 
 void ArchiveLister::errorText()
 {
-    kDebug()<<"extracter:"<<QTextCodec::codecForName("utf-8")->toUnicode(_process.readAllStandardError());
+    debug()<<"extracter:"<<QTextCodec::codecForName("utf-8")->toUnicode(_process.readAllStandardError());
 }
 
 void ArchiveLister::error(QProcess::ProcessError error)
 {
-    kDebug()<<"Error"<<error;
+    debug()<<"Error"<<error;
     Q_ASSERT(false);
 }
 
@@ -276,18 +280,18 @@ void ArchiveLister::finished(int exitCode, QProcess::ExitStatus exitStatus)
     Q_ASSERT(exitCode == 0);
     Q_ASSERT(exitStatus == QProcess::NormalExit);
 
-    if (_archiveType == FileClassifier::Zip) {
+    if (_archiveType == FileClassification::Zip) {
         // Unzip has huge problems with filenames, so try to clean them up a bit
         // For example, it can't handle '[' or ']' in the path
         //  or filenames encoded from a non-UTF charset like Shift-JIS
         cleanZipFilenames();
     }
 
-    kDebug()<<"Listing finished:"<<_listingTime.elapsed()<<" ms";
+    debug()<<"Listing finished:"<<_listingTime.elapsed()<<" ms";
 
     // Note: pages might not be in a good order, depending on the decompressor's
     //  "sorting" logic
-    finishListing(_fileList, _fileSizes, 0);
+    emit finished();
 }
 
 void ArchiveLister::cleanZipFilenames()

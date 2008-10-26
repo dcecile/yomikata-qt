@@ -1,0 +1,5 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file alias="icon_16.png">hi16-app-yomikata.png</file>
+</qresource>
+</RCC>
