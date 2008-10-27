@@ -75,7 +75,7 @@ endif()
 
 # Development options
 if(DEV_MODE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -O0 -ggdb")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -O0 -ggdb")
     set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/install
         CACHE STRING
         "Install path prefix, prepended onto install directories.")
