@@ -152,14 +152,8 @@ void Book::shiftNext()
         lastPage = _page1;
     }
 
-    // Check that not at the end of the book
-    if (shift && lastPage == _numPages - 1)
-    {
-        shift = false;
-    }
-
     // Check that the next page isn't dual
-    if (shift && _info[lastPage + 1].dual)
+    if (_info[lastPage + 1].dual)
     {
         shift = false;
     }
