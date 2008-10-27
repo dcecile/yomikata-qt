@@ -109,6 +109,21 @@ void Projector::showPage1(const QRect &rect, QPixmap image)
     _page1->show();
 }
 
+/**
+ * @todo Should assert that this won't cause scaling
+ */
+void Projector::updatePosition0(const QRect &rect)
+{
+    _loading0->setGeometry(rect);
+    _page0->setGeometry(rect);
+}
+
+void Projector::updatePosition1(const QRect &rect)
+{
+    _loading1->setGeometry(rect);
+    _page1->setGeometry(rect);
+}
+
 void Projector::resizeEvent(QResizeEvent *event)
 {
     emit resized(event->size());

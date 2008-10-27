@@ -5,6 +5,8 @@
 
 #include <vector>
 
+class QMutex;
+
 using std::vector;
 
 /**
@@ -38,15 +40,14 @@ using std::vector;
  * for them to be viewed together due to the nature of the shifting operation.
  * When dual page is found, this condition must always be maintained.
  *
- * @todo shifting
- * @todo notify on unexpected current page change
+ * @todo Allow for un-setting pages as dual, in case a prediction is wrong
  */
 class Book : public QObject
 {
     Q_OBJECT
 
 public:
-    Book(int numPages, QObject *parent = NULL);
+    Book(QMutex &lock, QObject *parent = NULL);
     ~Book();
 
     void reset(int numPages);
@@ -56,21 +57,22 @@ public:
     void shiftNext();
 
     void setDual(int page);
-    bool isDual(int page) const;
+    bool isDual(int page);
 
-    int page0() const;
-    int page1() const;
+    int page0();
+    int page1();
 
-    int pairedPage(int page) const;
-    int pairedPageOffset(int page) const;
+    int pairedPage(int page);
+    int pairedPageOffset(int page);
 
-    int numPages() const;
+    int numPages();
 
-    bool isNextEnabled() const;
-    bool isPreviousEnabled() const;
+    bool isNextEnabled();
+    bool isPreviousEnabled();
 
 signals:
     void changed();
+    void dualCausePageChange();
 
 private:
     enum Pair {Previous = -1, None, Next};
@@ -81,6 +83,7 @@ private:
     };
 
 private:
+    QMutex &_lock;
     int _numPages;
     vector<Info> _info;
     int _page0;

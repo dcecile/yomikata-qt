@@ -22,6 +22,9 @@ public:
     void showPage0(const QRect &rect, QPixmap image);
     void showPage1(const QRect &rect, QPixmap image);
 
+    void updatePosition0(const QRect &rect);
+    void updatePosition1(const QRect &rect);
+
     int heightForWidth(int width) const;
 
 signals:

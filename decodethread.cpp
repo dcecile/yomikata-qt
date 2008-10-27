@@ -207,6 +207,7 @@ void DecodeThread::decode()
         }
 
         // Notify cancelled
+        prepareForRequest();
         emit cancelled(this);
         return;
     }
@@ -235,6 +236,7 @@ void DecodeThread::decode()
         // Check if cancelled
         if (_cancelled)
         {
+            prepareForRequest();
             emit cancelled(this);
             return;
         }
@@ -259,7 +261,15 @@ void DecodeThread::decode()
     debug()<<"Decoded"<<_pageNum<<"--"<<time.elapsed()<<"ms";
 
     // Decode job now finished
-    emit done(this, _pageNum, image);
+    int pageNum = _pageNum;
+    prepareForRequest();
+    emit done(this, pageNum, image);
+}
+
+void DecodeThread::prepareForRequest()
+{
+    QMutexLocker locker(&_requestLock);
+    _pageNum = -1;
 }
 
 #include "decodethread.moc"

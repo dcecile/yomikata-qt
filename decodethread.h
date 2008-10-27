@@ -33,6 +33,7 @@ private:
     void run();
     void setExtractCommand();
     void decode();
+    void prepareForRequest();
 
 private:
     static const int CANCELLED_POLLING = 50;

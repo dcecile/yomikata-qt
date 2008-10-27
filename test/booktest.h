@@ -3,7 +3,9 @@
 
 #include <QObject>
 
-class Book;
+#include <QMutex>
+
+#include "book.h"
 
 /**
  * @brief Unit testing for Book. Excercises all page turning and dual page
@@ -33,7 +35,8 @@ private slots:
     void persistentShiftedParity();
 
 private:
-    Book *_book;
+    Book _book;
+    QMutex _lock;
 };
 
 #endif

@@ -12,17 +12,20 @@
 
 Steward::Steward(QObject *parent)
     : QObject(parent),
-    _book(*new Book(0, this)),
+    _lock(QMutex::Recursive),
+    _book(*new Book(_lock, this)),
     _indexer(*new Indexer(this)),
-    _strategist(*new Strategist(_book, this)),
+    _strategist(*new Strategist(_book, _lock, this)),
     _artificer(*new Artificer(_indexer, _strategist, this)),
     _projector(*new Projector(NULL)),
     _debugWidget(new DebugWidget(_book, NULL))
 {
     // Connect
+    connect(&_book, SIGNAL(dualCausePageChange()), SLOT(pageChanged()));
     connect(&_indexer, SIGNAL(built()), SLOT(indexerBuilt()));
-    connect(&_projector, SIGNAL(resized(const QSize&)), SLOT(viewportResized(const QSize&)));
+    connect(&_strategist, SIGNAL(recievedFullPageSize(int)), SLOT(recievedFullPageSize(int)));
     connect(&_artificer, SIGNAL(pageDecoded(int, QPixmap)), SLOT(decodeDone(int, QPixmap)));
+    connect(&_projector, SIGNAL(resized(const QSize&)), SLOT(viewportResized(const QSize&)));
 
     _buildingIndexer = false;
 }
@@ -147,6 +150,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Or try decoding again, if needed
         else
         {
+            debug()<<"Wrong size"<<index;
             _artificer.decodePages(current0, current1);
         }
     }
@@ -162,6 +166,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Or try decoding again, if needed
         else
         {
+            debug()<<"Wrong size"<<index;
             _artificer.decodePages(current0, current1);
         }
     }
@@ -184,6 +189,26 @@ void Steward::viewportResized(const QSize &size)
     {
         // Reload the pages
         pageChanged();
+    }
+}
+
+/**
+ * @todo Do something if the sizes are wrong
+ */
+void Steward::recievedFullPageSize(int index)
+{
+    // Update the projector's display if a current page was affected
+    int current0 = _book.page0();
+    int current1 = _book.page1();
+
+    if (current0 == index || current1 == index)
+    {
+        _projector.updatePosition0(_strategist.pageLayout(current0));
+
+        if (current1 >= 0)
+        {
+            _projector.updatePosition1(_strategist.pageLayout(current1));
+        }
     }
 }
 

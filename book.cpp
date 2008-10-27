@@ -1,15 +1,18 @@
 #include "book.h"
 
 #include <QDebug>
+#include <QMutex>
 
-Book::Book(int numPages, QObject *parent)
-    : QObject(parent)
+Book::Book(QMutex &lock, QObject *parent)
+    : QObject(parent), _lock(lock)
 {
-    reset(numPages);
+    reset(0);
 }
 
 void Book::reset(int numPages)
 {
+    QMutexLocker locker(&_lock);
+
     // Set the number of pages
     _numPages = numPages;
 
@@ -62,6 +65,8 @@ Book::~Book()
 
 void Book::next()
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(_page0 < _numPages - 1 && _page1 < _numPages - 1);
 
     // Go to the one after the second page
@@ -87,6 +92,8 @@ void Book::next()
 
 void Book::previous()
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(_page0 > 0);
 
     // Get the pair of the previous page
@@ -120,6 +127,8 @@ void Book::previous()
  */
 void Book::shiftNext()
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(_page0 < _numPages - 1 && _page1 < _numPages - 1);
 
     bool shift = true;
@@ -228,7 +237,12 @@ void Book::shiftNext()
  */
 void Book::setDual(int page)
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(page >= 0 && page < _numPages);
+
+    int initialPage0 = _page0;
+    int initialPage1 = _page1;
 
     // If the page was paired, unpair it
     if (_info[page].pair == Previous)
@@ -364,26 +378,40 @@ void Book::setDual(int page)
 
     // Notify changed
     emit changed();
+
+    // Notify if the current pages changed
+    if (initialPage0 != _page0 || initialPage1 != _page1)
+    {
+        emit dualCausePageChange();
+    }
 }
 
-bool Book::isDual(int page) const
+bool Book::isDual(int page)
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(page >= 0 && page < _numPages);
     return _info[page].dual;
 }
 
-int Book::page0() const
+int Book::page0()
 {
+    QMutexLocker locker(&_lock);
+
     return _page0;
 }
 
-int Book::page1() const
+int Book::page1()
 {
+    QMutexLocker locker(&_lock);
+
     return _page1;
 }
 
-int Book::pairedPage(int page) const
+int Book::pairedPage(int page)
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(page >= 0 && page < _numPages);
 
     const Pair &pair = _info[page].pair;
@@ -402,25 +430,33 @@ int Book::pairedPage(int page) const
     }
 }
 
-int Book::pairedPageOffset(int page) const
+int Book::pairedPageOffset(int page)
 {
+    QMutexLocker locker(&_lock);
+
     Q_ASSERT(page >= 0 && page < _numPages);
 
     return (int) _info[page].pair;
 }
 
-int Book::numPages() const
+int Book::numPages()
 {
+    QMutexLocker locker(&_lock);
+
     return _numPages;
 }
 
-bool Book::isNextEnabled() const
+bool Book::isNextEnabled()
 {
+    QMutexLocker locker(&_lock);
+
     return _page0 < _numPages - 1 && _page1 < _numPages - 1;
 }
 
-bool Book::isPreviousEnabled() const
+bool Book::isPreviousEnabled()
 {
+    QMutexLocker locker(&_lock);
+
     return _page0 > 0;
 }
 

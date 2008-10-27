@@ -4,7 +4,7 @@
 
 #include "debug.h"
 
-DebugWidget::DebugWidget(const Book &book, QWidget *parent)
+DebugWidget::DebugWidget(Book &book, QWidget *parent)
     : QGraphicsView(parent), _book(book)
 {
     // Create the scene

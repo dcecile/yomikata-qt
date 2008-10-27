@@ -103,7 +103,7 @@ void Artificer::decodePages(int page0, int page1)
 void Artificer::decodeThreadDone(DecodeThread *decodeThread, int index, QImage image)
 {
     // Start a new decode if needed
-    if (true)//decodeThread->currentPageNum() == -1)
+    if (decodeThread->currentPageNum() == -1)
     {
         if (_request0 >= 0)
         {
@@ -130,15 +130,18 @@ void Artificer::decodeThreadCancelled(DecodeThread *decodeThread)
     debug()<<"Cancelled";
 
     // Start a new decode if needed
-    if (_request0 >= 0)
+    if (decodeThread->currentPageNum() == -1)
     {
-        decodeThread->decode(_request0);
-        _request0 = -1;
-    }
-    else if (_request1 >= 0)
-    {
-        decodeThread->decode(_request1);
-        _request1 = -1;
+        if (_request0 >= 0)
+        {
+            decodeThread->decode(_request0);
+            _request0 = -1;
+        }
+        else if (_request1 >= 0)
+        {
+            decodeThread->decode(_request1);
+            _request1 = -1;
+        }
     }
 }
 

@@ -4,6 +4,7 @@
 #include <QObject>
 
 #include <QPixmap>
+#include <QMutex>
 
 class QWidget;
 
@@ -39,8 +40,10 @@ private slots:
     void pageChanged();
     void decodeDone(int index, QPixmap page);
     void viewportResized(const QSize &size);
+    void recievedFullPageSize(int index);
 
 private:
+    QMutex _lock;
     Book &_book;
     Indexer &_indexer;
     Strategist &_strategist;

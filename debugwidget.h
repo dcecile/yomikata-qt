@@ -17,7 +17,7 @@ class DebugWidget : public QGraphicsView
     Q_OBJECT
 
     public:
-        DebugWidget(const Book &_book, QWidget *parent = NULL);
+        DebugWidget(Book &_book, QWidget *parent = NULL);
         ~DebugWidget();
 
         QSize sizeHint() const;
@@ -30,7 +30,7 @@ class DebugWidget : public QGraphicsView
         void setup();
 
     private:
-        const Book &_book;
+        Book &_book;
 
         QGraphicsScene _scene;
         vector<DebugPageItem *> _pages;
