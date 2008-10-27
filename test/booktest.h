@@ -35,8 +35,8 @@ private slots:
     void persistentShiftedParity();
 
 private:
-    Book _book;
     QMutex _lock;
+    Book _book;
 };
 
 #endif

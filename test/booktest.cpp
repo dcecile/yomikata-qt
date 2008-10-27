@@ -18,7 +18,7 @@
     while (0)
 
 BookTest::BookTest()
-    : _book(_lock, this)
+    : _lock(QMutex::Recursive), _book(_lock, this)
 {
 }
 
