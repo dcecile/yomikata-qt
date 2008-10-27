@@ -82,10 +82,14 @@ QSize DebugWidget::sizeHint() const
     return QSize(300, 50);
 }
 
-void DebugWidget::resizeEvent(QResizeEvent *)
+void DebugWidget::resizeEvent(QResizeEvent *event)
 {
-    // Make sure the scene is scaled in the view
-    fitInView(0.0, 0.0, 400.0, 100.0, Qt::KeepAspectRatio);
+    // Only scale if there's a valid widget size
+    if (event->size().isValid())
+    {
+        // Make sure the scene is scaled in the view
+        fitInView(0.0, 0.0, 400.0, 100.0, Qt::KeepAspectRatio);
+    }
 }
 
 void DebugWidget::mousePressEvent(QMouseEvent *event)
