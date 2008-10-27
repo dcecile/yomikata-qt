@@ -51,7 +51,7 @@ void DecodeThread::decode(int index)
     QMutexLocker locker(&_requestLock);
 
     // Assert no current decode
-    //Q_ASSERT(_pageNum == -1);
+    Q_ASSERT(_pageNum == -1);
 
     // Create a request
     _requestPageNum = index;
