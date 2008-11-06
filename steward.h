@@ -37,10 +37,14 @@ public slots:
 
 private slots:
     void indexerBuilt();
-    void pageChanged();
     void decodeDone(int index, QPixmap page);
     void viewportResized(const QSize &size);
     void recievedFullPageSize(int index);
+    void dualCausedPageChange();
+
+private:
+    void pageChanged();
+    void loadPages();
 
 private:
     QMutex _lock;

@@ -21,7 +21,7 @@ Steward::Steward(QObject *parent)
     _debugWidget(new DebugWidget(_book, NULL))
 {
     // Connect
-    connect(&_book, SIGNAL(dualCausePageChange()), SLOT(pageChanged()));
+    connect(&_book, SIGNAL(dualCausedPageChange()), SLOT(dualCausedPageChange()));
     connect(&_indexer, SIGNAL(built()), SLOT(indexerBuilt()));
     connect(&_strategist, SIGNAL(recievedFullPageSize(int)), SLOT(recievedFullPageSize(int)));
     connect(&_artificer, SIGNAL(pageDecoded(int, QPixmap)), SLOT(decodeDone(int, QPixmap)));
@@ -113,6 +113,15 @@ void Steward::shiftNext()
 void Steward::pageChanged()
 {
     // Show the current page(s)
+    loadPages();
+
+    // Start scroll to the start of the pages
+    _projector.pagesChanged();
+}
+
+void Steward::loadPages()
+{
+    // Show the current page(s)
     int current0 = _book.page0();
     int current1 = _book.page1();
 
@@ -174,6 +183,8 @@ void Steward::decodeDone(int index, QPixmap page)
 
 void Steward::viewportResized(const QSize &size)
 {
+    debug()<<"Resized"<<size;
+
     // Notify the strategist
     _strategist.setViewport(size);
 
@@ -188,7 +199,7 @@ void Steward::viewportResized(const QSize &size)
     else if (_book.numPages() > 0)
     {
         // Reload the pages
-        pageChanged();
+        loadPages();
     }
 }
 
@@ -210,6 +221,12 @@ void Steward::recievedFullPageSize(int index)
             _projector.updatePosition1(_strategist.pageLayout(current1));
         }
     }
+}
+
+void Steward::dualCausedPageChange()
+{
+    // Reload the current pages
+    loadPages();
 }
 
 #include "steward.moc"

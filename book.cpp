@@ -376,7 +376,7 @@ void Book::setDual(int page)
     // Notify if the current pages changed
     if (initialPage0 != _page0 || initialPage1 != _page1)
     {
-        emit dualCausePageChange();
+        emit dualCausedPageChange();
     }
 }
 

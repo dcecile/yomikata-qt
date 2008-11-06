@@ -72,7 +72,7 @@ public:
 
 signals:
     void changed();
-    void dualCausePageChange();
+    void dualCausedPageChange();
 
 private:
     enum Pair {Previous = -1, None, Next};

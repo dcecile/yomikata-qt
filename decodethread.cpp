@@ -233,14 +233,6 @@ void DecodeThread::decode()
 
     if (!prescaled)
     {
-        // Check if cancelled
-        if (_cancelled)
-        {
-            prepareForRequest();
-            emit cancelled(this);
-            return;
-        }
-
         // The image was decoded at the full size because we "can't" tell the size
         //  before starting decoding
 
@@ -251,10 +243,16 @@ void DecodeThread::decode()
         // Save the size
         _strategist.setFullPageSize(_pageNum, fullSize);
 
-        // Notify the page that the decode size is set
-        QSize targetSize = _strategist.pageLayout(_pageNum).size();
+        // Check if cancelled, after storing the full size
+        if (_cancelled)
+        {
+            prepareForRequest();
+            emit cancelled(this);
+            return;
+        }
 
         // Resize the image now
+        QSize targetSize = _strategist.pageLayout(_pageNum).size();
         image = image.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
 
