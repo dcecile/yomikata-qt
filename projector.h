@@ -5,6 +5,8 @@
 
 class QLabel;
 
+class Scroller;
+
 class Projector : public QScrollArea
 {
     Q_OBJECT
@@ -48,6 +50,7 @@ private:
     QWidget *_loading1;
     QLabel *_page0;
     QLabel *_page1;
+    Scroller *_scroller;
 };
 
 #endif

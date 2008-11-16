@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "scroller.h"
 #include "debug.h"
 
 using std::min;
@@ -17,8 +18,9 @@ using std::max;
 Projector::Projector(QWidget *parent)
     : QScrollArea(parent)
 {
-    // Grab the target widget
+    // Set the target widget
     _target = new QWidget(this);
+    _target->setMouseTracking(true);
     setWidget(_target);
     _target->show();
 
@@ -31,8 +33,10 @@ Projector::Projector(QWidget *parent)
     _loading1->setParent(_target);
 
     _page0 = new QLabel(_target);
+    _page0->setMouseTracking(true);
     _page0->hide();
     _page1 = new QLabel(_target);
+    _page1->setMouseTracking(true);
     _page1->hide();
 
     // Always expand
@@ -44,8 +48,8 @@ Projector::Projector(QWidget *parent)
     setFrameStyle(QFrame::NoFrame);
 
     // No scrollbars
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // Nothing displayed
     _placement[0] = QRect();
@@ -54,6 +58,9 @@ Projector::Projector(QWidget *parent)
     // Reset the scroll position when the ranges change
     connect(horizontalScrollBar(), SIGNAL(rangeChanged(int, int)), SLOT(pagesChanged()));
     connect(verticalScrollBar(), SIGNAL(rangeChanged(int, int)), SLOT(pagesChanged()));
+
+    // Scroller
+    _scroller = new Scroller(this);
 }
 
 Projector::~Projector()
@@ -63,6 +70,7 @@ Projector::~Projector()
 QWidget *Projector::createLoadingWidget()
 {
     QWidget *loading = new QWidget();
+    loading->setMouseTracking(true);
 
     QVBoxLayout *layout = new QVBoxLayout(loading);
     layout->setAlignment(Qt::AlignHCenter);
@@ -238,6 +246,9 @@ void Projector::pagesChanged()
     // Top
     QScrollBar *vBar = verticalScrollBar();
     vBar->setValue(vBar->minimum());
+
+    // Stop scrolling
+    _scroller->stopScrolling();
 }
 
 QRect Projector::displayArea()

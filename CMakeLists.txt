@@ -14,6 +14,7 @@ set(yomikata_SRCS
     archivelister.cpp
     fileclassification.cpp
     decodethread.cpp
+    scroller.cpp
 
     debugwidget.cpp
     debugpageitem.cpp
