@@ -188,14 +188,14 @@ void Projector::updateViewport()
         // Shift the widgets if needed
         bool shifted = false;
 
-        if (area.width() > viewport()->width())
+        if (false && area.width() > viewport()->width())
         {
             // No width scrolling
             _placement[0].translate(-area.left(), 0);
             _placement[1].translate(-area.left(), 0);
             shifted = true;
         }
-        else if (area.right() + area.left() > viewport()->width())
+        else if (false && area.right() + area.left() > viewport()->width())
         {
             // Centre width
             int target = (viewport()->width() - area.width()) / 2;
@@ -269,7 +269,7 @@ QRect Projector::displayArea()
 
 void Projector::resizeEvent(QResizeEvent *event)
 {
-    emit resized(event->size() * 3 / 2);
+    emit resized(event->size() * 4 / 2);
 }
 
 void Projector::wheelEvent(QWheelEvent *event)

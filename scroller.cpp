@@ -89,7 +89,8 @@ void Scroller::moved(QPointF pos)
     _lastMousePos = pos;
 
     // Calculate the force
-    const double FORCE_FACTOR = -0.01;
+    //const double FORCE_FACTOR = -0.01;
+    const double FORCE_FACTOR = -0.02;
     QPointF force = distance * FORCE_FACTOR;
 
     _velocity += force * time;
@@ -107,7 +108,8 @@ void Scroller::timeStep()
 
     // Evaluate each time step
     const double TIME_STEP = 0.01;
-    const double FRICTION = 0.1;
+    //const double FRICTION = 0.1;
+    const double FRICTION = 0.2;
     //const double FORCE_DECAY = 4.0;
     const double CUTOFF = 2.0/1000.0;
     QPointF totalForce;
@@ -125,12 +127,12 @@ void Scroller::timeStep()
         _scrollPos += _velocity * time + 0.5 * totalForce * time * time;
 
         // Cut off small values
-        if (abs(_velocity.x()) < CUTOFF)
+        if (fabs(_velocity.x()) < CUTOFF)
         {
             _velocity.setX(0.0);
         }
 
-        if (abs(_velocity.y()) < CUTOFF)
+        if (fabs(_velocity.y()) < CUTOFF)
         {
             _velocity.setY(0.0);
         }

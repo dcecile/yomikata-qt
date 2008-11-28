@@ -48,6 +48,11 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     _zoomToggleEnabled = true;
     _zoomInEnabled = true;
     _zoomOutEnabled = true;
+
+    // Connect
+    connect(this, SIGNAL(nextPage()), _steward, SLOT(next()));
+    connect(this, SIGNAL(previousPage()), _steward, SLOT(previous()));
+    connect(this, SIGNAL(shiftNextPage()), _steward, SLOT(shiftNext()));
 }
 
 MainWindow::~MainWindow()
@@ -106,12 +111,18 @@ void MainWindow::wheelEvent(QWheelEvent *event)
         if (event->delta() > 0)
         {
             // Page back
-            _steward->previous();
+            for (int i = 0; i < event->delta() / 120; i++)
+            {
+                emit previousPage();
+            }
         }
         else if (event->delta() < 0)
         {
             // Page forward
-            _steward->next();
+            for (int i = 0; i < event->delta() / -120; i++)
+            {
+                emit nextPage();
+            }
         }
         else
         {
@@ -126,7 +137,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
     // Middle mouse triggers paging forward one page
     if (event->button() == Qt::MidButton)
     {
-        _steward->shiftNext();
+        emit shiftNextPage();
     }
 
     // Right mouse toggles zoom

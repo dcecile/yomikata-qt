@@ -36,6 +36,27 @@ MainWindowQt::MainWindowQt(const QString &initialArg, QWidget *parent)
     debug->setShortcutContext(Qt::ApplicationShortcut);
     addAction(debug);
     connect(debug, SIGNAL(toggled(bool)), SLOT(showDebugWidget(bool)));
+
+    // Next page shortcut
+    QAction *nextPage = new QAction(this);
+    nextPage->setShortcuts(QList<QKeySequence>()<<Qt::Key_Space<<Qt::Key_PageDown<<Qt::Key_Left);
+    nextPage->setShortcutContext(Qt::ApplicationShortcut);
+    addAction(nextPage);
+    connect(nextPage, SIGNAL(triggered()), SIGNAL(nextPage()));
+
+    // Previous page shortcut
+    QAction *previousPage = new QAction(this);
+    previousPage->setShortcuts(QList<QKeySequence>()<<Qt::Key_PageUp<<Qt::Key_Right);
+    previousPage->setShortcutContext(Qt::ApplicationShortcut);
+    addAction(previousPage);
+    connect(previousPage, SIGNAL(triggered()), SIGNAL(previousPage()));
+
+    // Shift next page shortcut
+    QAction *shiftNextPage = new QAction(this);
+    shiftNextPage->setShortcut(Qt::Key_Tab);
+    shiftNextPage->setShortcutContext(Qt::ApplicationShortcut);
+    addAction(shiftNextPage);
+    connect(shiftNextPage, SIGNAL(triggered()), SIGNAL(shiftNextPage()));
 }
 
 MainWindowQt::~MainWindowQt()

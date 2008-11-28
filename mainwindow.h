@@ -23,6 +23,11 @@ public:
 
     QSize sizeHint() const;
 
+signals:
+    void nextPage();
+    void previousPage();
+    void shiftNextPage();
+
 protected slots:
     void showDebugWidget(bool toggled);
 
