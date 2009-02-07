@@ -1,9 +1,7 @@
 #include "scroller.h"
 
-#include <QAbstractScrollArea>
-#include <QScrollBar>
+#include <QWidget>
 #include <QMouseEvent>
-#include <QApplication>
 
 #include <algorithm>
 
@@ -14,41 +12,39 @@
 using std::min;
 using std::max;
 
-Scroller::Scroller(QAbstractScrollArea *parent)
+Scroller::Scroller(QWidget *parent)
     : QObject(parent)
 {
     _parent = parent;
-    _viewport = _parent->viewport();
-    _hBar = _parent->horizontalScrollBar();
-    _vBar = _parent->verticalScrollBar();
-    debug()<<"Bars"<<_hBar<<_vBar;
 
     // Subscribe to mouse movement
-    _viewport->setMouseTracking(true);
+    _parent->setMouseTracking(true);
 
     // Hide the cursor
-    _viewport->setCursor(Qt::BlankCursor);
+    //_viewport->setCursor(Qt::BlankCursor);
 
     // Become an event filter
-    _viewport->installEventFilter(this);
+    _parent->installEventFilter(this);
 
     // Start stopped
     _velocity = QPointF(0.0, 0.0);
     _scrollPos = QPointF(0.0, 0.0);
     _lastUpdatedScrollPos = QPointF(0.0, 0.0);
 
-    // Start the timers
+    // Start the clocks
     _slideTime.start();
     _mouseTime.start();
-
-    // Set up the timer
-    _updateTimer.setInterval(int(1000.0 / 30.0 + 0.5));
-    _updateTimer.setSingleShot(true);
-    connect(&_updateTimer, SIGNAL(timeout()), SLOT(updateWidget()));
-    _updateTimer.start();
 }
 
 Scroller::~Scroller()
+{
+}
+
+void Scroller::setExtent(const QSize &size)
+{
+}
+
+void Scroller::reset()
 {
 }
 
@@ -57,9 +53,14 @@ void Scroller::stopScrolling()
     _velocity = QPointF(0.0, 0.0);
 }
 
+QPoint position()
+{
+    return QPoint();
+}
+
 bool Scroller::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == _viewport)
+    if (watched == _parent)
     {
         if (event->type() == QEvent::MouseMove)
         {
@@ -71,7 +72,7 @@ bool Scroller::eventFilter(QObject *watched, QEvent *event)
     return false;
 }
 
-void Scroller::moved(QPointF pos)
+void Scroller::moved(const QPointF &pos)
 {
     // Finish with the last force parameters
     timeStep();
@@ -141,33 +142,6 @@ void Scroller::timeStep()
         totalTime -= time;
         time = min(totalTime, TIME_STEP);
     }
-}
-
-void Scroller::updateWidget()
-{
-    // Check for stopped
-    if (_velocity.isNull())
-    {
-        _slideTime.restart();
-        _updateTimer.start();
-        return;
-    }
-
-    // Pump the events, to make sure input gets handled
-    QApplication::syncX();
-    QApplication::processEvents();
-
-    // Do the timestep
-    timeStep();
-
-    // Update the scroll positions
-    QPoint delta = (_scrollPos - _lastUpdatedScrollPos).toPoint();
-    _hBar->setValue(_hBar->value() + delta.x());
-    _vBar->setValue(_vBar->value() + delta.y());
-    _lastUpdatedScrollPos = _scrollPos;
-
-    // Start the update timer again
-    _updateTimer.start();
 }
 
 #include "scroller.moc"

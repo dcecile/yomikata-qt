@@ -9,6 +9,7 @@
 
 #include "debug.h"
 #include "steward.h"
+#include "loadingwidget.h"
 
 MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     : MainWindowAncestor(parent)

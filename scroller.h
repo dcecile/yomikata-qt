@@ -4,11 +4,9 @@
 #include <QObject>
 
 #include <QPointF>
-#include <QTimer>
 #include <QTime>
+#include <QSize>
 
-class QAbstractScrollArea;
-class QScrollBar;
 class QWidget;
 
 class Scroller: public QObject
@@ -16,31 +14,31 @@ class Scroller: public QObject
     Q_OBJECT
 
 public:
-    Scroller(QAbstractScrollArea *parent);
+    Scroller(QWidget *parent);
     ~Scroller();
 
+    void setExtent(const QSize &size);
+    void reset();
     void stopScrolling();
 
-private slots:
-    void updateWidget();
-    void timeStep();
+    QPoint position();
+
+signals:
+    void enableUpdates(bool enable);
 
 private:
     bool eventFilter(QObject *watched, QEvent *event);
-    void moved(QPointF pos);
+    void moved(const QPointF &pos);
+    void timeStep();
 
 private:
-    QAbstractScrollArea *_parent;
-    QWidget *_viewport;
-    QScrollBar *_hBar;
-    QScrollBar *_vBar;
+    QWidget *_parent;
     QPointF _lastMousePos;
 
     QPointF _velocity;
     QPointF _scrollPos;
     QPointF _lastUpdatedScrollPos;
 
-    QTimer _updateTimer;
     QTime _mouseTime;
     QTime _slideTime;
 };

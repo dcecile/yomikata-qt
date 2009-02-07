@@ -1,101 +1,22 @@
 #include "projector.h"
 
-#include <QVBoxLayout>
-#include <QProgressBar>
-#include <QLabel>
-#include <QResizeEvent>
-#include <QVBoxLayout>
-#include <QScrollBar>
+#include <QPainter>
+#include <QPaintEvent>
 
-#include <algorithm>
-
-#include "scroller.h"
 #include "debug.h"
 
-using std::min;
-using std::max;
+const double Projector::MAGNIFICATION = 1.0;
 
 Projector::Projector(QWidget *parent)
-    : QScrollArea(parent)
+    : QWidget(parent), _scroller(this)
 {
-    // Set the target widget
-    _target = new QWidget(this);
-    _target->setMouseTracking(true);
-    setWidget(_target);
-    _target->show();
-
-    // Initialize
-    _loading0 = createLoadingWidget();
-    _loading0->hide();
-    _loading0->setParent(_target);
-    _loading1 = createLoadingWidget();
-    _loading1->hide();
-    _loading1->setParent(_target);
-
-    _page0 = new QLabel(_target);
-    _page0->setMouseTracking(true);
-    _page0->hide();
-    _page1 = new QLabel(_target);
-    _page1->setMouseTracking(true);
-    _page1->hide();
-
-    // Always expand
-    QSizePolicy policy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-    policy.setHeightForWidth(true);
-    setSizePolicy(policy);
-
-    // No frame
-    setFrameStyle(QFrame::NoFrame);
-
-    // No scrollbars
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-    // Nothing displayed
-    _placement[0] = QRect();
-    _placement[1] = QRect();
-
-    // Reset the scroll position when the ranges change
-    connect(horizontalScrollBar(), SIGNAL(rangeChanged(int, int)), SLOT(pagesChanged()));
-    connect(verticalScrollBar(), SIGNAL(rangeChanged(int, int)), SLOT(pagesChanged()));
-
-    // Scroller
-    _scroller = new Scroller(this);
+    // Show nothing
+    _isShown[0] = false;
+    _isShown[1] = false;
 }
 
 Projector::~Projector()
 {
-}
-
-QWidget *Projector::createLoadingWidget()
-{
-    QWidget *loading = new QWidget();
-    loading->setMouseTracking(true);
-
-    QVBoxLayout *layout = new QVBoxLayout(loading);
-    layout->setAlignment(Qt::AlignHCenter);
-
-    layout->addStretch(1);
-
-    QLabel *label = new QLabel("Loading", this);
-    label->setAlignment(Qt::AlignCenter);
-    layout->addWidget(label);
-
-    layout->addSpacing(20);
-
-    QProgressBar *progress = new QProgressBar(this);
-    progress->setRange(0, 0);
-    progress->setMaximumWidth(100);
-    layout->addWidget(progress);
-
-    layout->addStretch(1);
-
-    return loading;
-}
-
-int Projector::heightForWidth(int width) const
-{
-    return width * 3 / 4;
 }
 
 QSize Projector::sizeHint() const
@@ -103,173 +24,145 @@ QSize Projector::sizeHint() const
     return QSize(200, 100);
 }
 
+int Projector::heightForWidth(int width) const
+{
+    return width * 3 / 4;
+}
+
 void Projector::showBlank()
 {
-    //debug()<<"Blank";
-    _placement[0] = QRect();
-    _placement[1] = QRect();
-    _loading0->hide();
-    _loading1->hide();
-    _page0->hide();
-    _page1->hide();
+    _isShown[0] = false;
+    _isShown[1] = false;
+    update();
 }
 
 void Projector::showLoading0(const QRect &rect)
 {
-    //debug()<<"Loading0"<<rect;
+    _isShown[0] = true;
+    _isLoading[0] = true;
     _placement[0] = rect;
-    _loading0->setGeometry(rect);
-
-    _page0->hide();
-    _loading0->show();
-    updateViewport();
+    update();
 }
 
 void Projector::showLoading1(const QRect &rect)
 {
-    //debug()<<"Loading1"<<rect;
+    _isShown[1] = true;
+    _isLoading[1] = true;
     _placement[1] = rect;
-    _loading1->setGeometry(rect);
-
-    _page1->hide();
-    _loading1->show();
-    updateViewport();
+    update();
 }
 
-void Projector::showPage0(const QRect &rect, QPixmap image)
+void Projector::showPage0(const QRect &rect, QPixmap pixmap)
 {
-    //debug()<<"Page0"<<rect;
+    Q_ASSERT(rect.size() == pixmap.size());
+
+    _isShown[0] = true;
+    _isLoading[0] = false;
     _placement[0] = rect;
-    _page0->setPixmap(image);
-    _page0->setGeometry(rect);
-
-    _loading0->hide();
-    _page0->show();
-    updateViewport();
+    _pageSprite0.setPixmap(pixmap);
+    update();
 }
 
-void Projector::showPage1(const QRect &rect, QPixmap image)
+void Projector::showPage1(const QRect &rect, QPixmap pixmap)
 {
-    //debug()<<"Page1"<<rect;
-    _placement[1] = rect;
-    _page1->setPixmap(image);
-    _page1->setGeometry(rect);
+    Q_ASSERT(rect.size() == pixmap.size());
 
-    _loading1->hide();
-    _page1->show();
-    updateViewport();
+    _isShown[1] = true;
+    _isLoading[1] = false;
+    _placement[1] = rect;
+    _pageSprite1.setPixmap(pixmap);
+    update();
 }
 
-/**
- * @todo Should assert that this won't cause scaling
- */
 void Projector::updatePosition0(const QRect &rect)
 {
     _placement[0] = rect;
-    _loading0->setGeometry(rect);
-    _page0->setGeometry(rect);
-    updateViewport();
+    update();
 }
 
 void Projector::updatePosition1(const QRect &rect)
 {
     _placement[1] = rect;
-    _loading1->setGeometry(rect);
-    _page1->setGeometry(rect);
-    updateViewport();
-}
-
-void Projector::updateViewport()
-{
-    QRect area = displayArea();
-
-    if (area.isValid())
-    {
-        // Shift the widgets if needed
-        bool shifted = false;
-
-        if (false && area.width() > viewport()->width())
-        {
-            // No width scrolling
-            _placement[0].translate(-area.left(), 0);
-            _placement[1].translate(-area.left(), 0);
-            shifted = true;
-        }
-        else if (false && area.right() + area.left() > viewport()->width())
-        {
-            // Centre width
-            int target = (viewport()->width() - area.width()) / 2;
-            _placement[0].translate(-area.left() + target, 0);
-            _placement[1].translate(-area.left() + target, 0);
-            shifted = true;
-        }
-
-        if (area.height() > viewport()->height())
-        {
-            // No height scrolling
-            _placement[0].translate(0, -area.top());
-            _placement[1].translate(0, -area.top());
-            shifted = true;
-        }
-        else if (area.bottom() + area.top() > viewport()->height())
-        {
-            // Centre height
-            int target = (viewport()->height() - area.height()) / 2;
-            _placement[0].translate(0, -area.top() + target);
-            _placement[1].translate(0, -area.top() + target);
-            shifted = true;
-        }
-
-        if (shifted)
-        {
-            // Reset the geometry of the widgets
-            _loading0->setGeometry(_placement[0]);
-            _page0->setGeometry(_placement[0]);
-            _loading1->setGeometry(_placement[1]);
-            _page1->setGeometry(_placement[1]);
-            area = displayArea();
-        }
-
-        // Make the target widget stretch out to the edges of the pages plus the margins
-        _target->resize(area.right() + area.left(), area.bottom() + area.top());
-    }
+    update();
 }
 
 void Projector::pagesChanged()
 {
-    QRect area = displayArea();
-
-    // Far right
-    QScrollBar *hBar = horizontalScrollBar();
-    hBar->setValue(hBar->maximum());
-
-    // Top
-    QScrollBar *vBar = verticalScrollBar();
-    vBar->setValue(vBar->minimum());
-
-    // Stop scrolling
-    _scroller->stopScrolling();
-}
-
-QRect Projector::displayArea()
-{
-    if (_placement[0].isValid() && _placement[1].isValid())
-    {
-        return _placement[0].united(_placement[1]);
-    }
-    else if (_placement[0].isValid())
-    {
-        return _placement[0];
-    }
-    else
-    {
-        return _placement[1];
-    }
+    _scroller.reset();
 }
 
 void Projector::resizeEvent(QResizeEvent *event)
 {
-    emit resized(event->size() * 4 / 2);
+    // Expand the size
+    QSize newSize = (QSizeF(event->size()) * MAGNIFICATION).toSize();
+
+    // Tell the scroller
+    _scroller.setExtent(newSize);
+
+    // Tell the steward
+    emit resized(newSize);
+}
+
+void Projector::paintEvent(QPaintEvent *event)
+{
+    // Set up the painter
+    QPainter painter(this);
+    QRect updateRect = event->rect();
+
+    // Both shown
+    if (_isShown[0] && _isShown[1])
+    {
+        if (_isLoading[0] && _isLoading[1])
+        {
+            // Both loading
+            _loadingSprite.setGeometry(_placement[0] | _placement[1]);
+            _loadingSprite.paint(&painter, updateRect);
+        }
+        else if (_isLoading[0] && !_isLoading[1])
+        {
+            // First loading
+            _loadingSprite.setGeometry(_placement[0]);
+            _loadingSprite.paint(&painter, updateRect);
+
+            // Second shown
+            _pageSprite1.setTopLeft(_placement[1].topLeft());
+            _pageSprite1.paint(&painter, updateRect);
+        }
+        else if (!_isLoading[0] && _isLoading[1])
+        {
+            // First shown
+            _pageSprite0.setTopLeft(_placement[0].topLeft());
+            _pageSprite0.paint(&painter, updateRect);
+
+            // Second loading
+            _loadingSprite.setGeometry(_placement[1]);
+            _loadingSprite.paint(&painter, updateRect);
+        }
+        else if (!_isLoading[0] && !_isLoading[1])
+        {
+            // Both shown
+            _pageSprite0.setTopLeft(_placement[0].topLeft());
+            _pageSprite0.paint(&painter, updateRect);
+            _pageSprite1.setTopLeft(_placement[1].topLeft());
+            _pageSprite1.paint(&painter, updateRect);
+        }
+    }
+    // One shown
+    else if (_isShown[0])
+    {
+        if (_isLoading[0])
+        {
+            // Loading
+            _loadingSprite.setGeometry(_placement[0]);
+            _loadingSprite.paint(&painter, updateRect);
+        }
+        else
+        {
+            // Shown
+            _pageSprite0.setTopLeft(_placement[0].topLeft());
+            _pageSprite0.paint(&painter, updateRect);
+        }
+    }
 }
 
 void Projector::wheelEvent(QWheelEvent *event)

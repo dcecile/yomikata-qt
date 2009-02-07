@@ -14,11 +14,15 @@ set(yomikata_SRCS
     archivelister.cpp
     fileclassification.cpp
     decodethread.cpp
+
     scroller.cpp
+    loadingsprite.cpp
+    pagesprite.cpp
 
     debugwidget.cpp
     debugpageitem.cpp
 
+    mean.cpp
     debug.cpp
 )
 

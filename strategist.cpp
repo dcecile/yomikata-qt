@@ -120,8 +120,8 @@ void Strategist::layOutPages(QRect *rect0, QRect *rect1, QSize fullSize0, QSize 
     rect1->setHeight(combinedTarget.height());
 
     // Position the target rectangles
-    //rect0->moveTo(combinedTarget.topLeft());
-    rect1->moveTo(/*combinedTarget.topLeft() + */QPoint(rect0->width(), 0));
+    rect0->moveTo(combinedTarget.topLeft());
+    rect1->moveTo(combinedTarget.topLeft() + QPoint(rect0->width(), 0));
 }
 
 void Strategist::convertToLargestHeight(QSize *size0, QSize *size1)
@@ -172,7 +172,7 @@ QRect Strategist::layOutPage(QSize fullSize)
     // Centre the image in the full area
     QPoint topLeft(int(double(_viewport.width() - fullSize.width()) / 2.0 + 0.5),
                    int(double(_viewport.height() - fullSize.height()) / 2.0 + 0.5));
-    topLeft = QPoint(0, 0);
+
     // Return the rect
     return QRect(topLeft, fullSize);
 }
