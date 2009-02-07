@@ -2,7 +2,12 @@
 
 #include <QMutex>
 
+#include "debug.h"
 #include "book.h"
+
+const int Strategist::DEFAULT_WIDTH = 934;
+const int Strategist::DEFAULT_HEIGHT = 1500;
+const double Strategist::DUAL_PAGE_RATIO = 1.0;
 
 Strategist::Strategist(Book &book, QMutex &lock, QObject *parent)
     : QObject(parent), _lock(lock), _book(book)
@@ -70,7 +75,7 @@ QRect Strategist::pageLayout(int index)
         // Check if it was found
         if (!fullSize1.isValid())
         {
-            fullSize0 = QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+            fullSize1 = QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
         }
 
         // Calculate layout for both pages

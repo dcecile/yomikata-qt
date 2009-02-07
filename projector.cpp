@@ -2,17 +2,25 @@
 
 #include <QPainter>
 #include <QPaintEvent>
+#include <QApplication>
 
 #include "debug.h"
 
 const double Projector::MAGNIFICATION = 1.0;
+const double Projector::FRAMES_PER_SECOND = 60.0;
 
 Projector::Projector(QWidget *parent)
-    : QWidget(parent), _scroller(this)
+    : QWidget(parent), _scroller(this), _loadingSprite(palette().color(QPalette::WindowText), palette().color(QPalette::Base))
 {
     // Show nothing
     _isShown[0] = false;
     _isShown[1] = false;
+
+    // Set the timer
+    _refreshTimer.setInterval(int(1000.0 / FRAMES_PER_SECOND + 0.5));
+    _refreshTimer.setSingleShot(true);
+    connect(&_refreshTimer, SIGNAL(timeout()), SLOT(refresh()));
+
 }
 
 Projector::~Projector()
@@ -163,6 +171,22 @@ void Projector::paintEvent(QPaintEvent *event)
             _pageSprite0.paint(&painter, updateRect);
         }
     }
+
+    // Refresh if doing loading animation
+    if ((_isShown[0] && _isLoading[0]) || (_isShown[1] && _isLoading[1]))
+    {
+        _refreshTimer.start();
+    }
+}
+
+void Projector::refresh()
+{
+    // Pump the events, to make sure input gets handled
+    QApplication::syncX();
+    QApplication::processEvents();
+
+    // Repaint immediately
+    repaint();
 }
 
 void Projector::wheelEvent(QWheelEvent *event)

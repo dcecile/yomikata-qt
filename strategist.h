@@ -34,9 +34,9 @@ signals:
     void recievedFullPageSize(int index);
 
 private:
-    static const int DEFAULT_WIDTH = 5;
-    static const int DEFAULT_HEIGHT = 7;
-    static const double DUAL_PAGE_RATIO = 1.0;
+    static const int DEFAULT_WIDTH;
+    static const int DEFAULT_HEIGHT;
+    static const double DUAL_PAGE_RATIO;
 
 private:
     void layOutPages(QRect *rect0, QRect *rect1, QSize fullSize0, QSize fullSize1);

@@ -41,8 +41,12 @@ private:
     void paintEvent(QPaintEvent *event);
     void wheelEvent(QWheelEvent *event);
 
+private slots:
+    void refresh();
+
 private:
     static const double MAGNIFICATION;
+    static const double FRAMES_PER_SECOND;
     bool _isShown[2];
     bool _isLoading[2];
     QRect _placement[2];
@@ -50,7 +54,7 @@ private:
     LoadingSprite _loadingSprite;
     PageSprite _pageSprite0;
     PageSprite _pageSprite1;
-    QTimer _updateTimer;
+    QTimer _refreshTimer;
 };
 
 #endif
