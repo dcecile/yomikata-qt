@@ -164,6 +164,9 @@ void DecodeThread::setExtractCommand()
     debug()<<"Extract command set:"<<_command<<_args;
 }
 
+/**
+ * @todo Really cancel the extracter if this decode isn't needed.
+ */
 void DecodeThread::decode()
 {
     QTime time;

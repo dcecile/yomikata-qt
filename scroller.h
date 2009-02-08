@@ -3,9 +3,9 @@
 
 #include <QObject>
 
+#include <QSizeF>
 #include <QPointF>
 #include <QTime>
-#include <QSize>
 
 class QWidget;
 
@@ -28,14 +28,15 @@ private:
     bool eventFilter(QObject *watched, QEvent *event);
     void moved(const QPointF &pos);
     void timeStep();
+    void enforceBounds();
 
 private:
     QWidget *_parent;
     QPointF _lastMousePos;
 
+    QSizeF _extent;
     QPointF _velocity;
     QPointF _scrollPos;
-    QPointF _lastUpdatedScrollPos;
 
     QTime _mouseTime;
     QTime _slideTime;

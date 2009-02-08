@@ -7,7 +7,7 @@
 #include "debug.h"
 #include "displaymetrics.h"
 
-const double Projector::MAGNIFICATION = 1.0;
+const double Projector::MAGNIFICATION = 2.0;
 const double Projector::FRAMES_PER_SECOND = 60.0;
 
 Projector::Projector(QWidget *parent)
@@ -106,7 +106,7 @@ void Projector::paintEvent(QPaintEvent *event)
     QRect updateRect = event->rect();
 
     // Calculate the scrolled rects
-    QPoint scrolling = QPoint(0, 0);//_scroller.position();
+    QPoint scrolling = _scroller.position();
     QRect scrolled[2];
 
     scrolled[0] = _placement[0].translated(-scrolling);

@@ -21,15 +21,15 @@ Scroller::Scroller(QWidget *parent)
     _parent->setMouseTracking(true);
 
     // Hide the cursor
-    //_parent->setCursor(Qt::BlankCursor);
+    _parent->setCursor(Qt::BlankCursor);
 
     // Become an event filter
     _parent->installEventFilter(this);
 
     // Start stopped
+    _extent = QSizeF(0.0, 0.0);
     _velocity = QPointF(0.0, 0.0);
     _scrollPos = QPointF(0.0, 0.0);
-    _lastUpdatedScrollPos = QPointF(0.0, 0.0);
 
     // Start the clocks
     _slideTime.start();
@@ -42,6 +42,12 @@ Scroller::~Scroller()
 
 void Scroller::reset(const QSize &extent)
 {
+    // New bounds
+    _extent = extent;
+
+    // Reset to start of pages
+    _scrollPos.setX(_extent.width());
+    _scrollPos.setY(0.0);
 }
 
 QPoint Scroller::position()
@@ -91,12 +97,14 @@ void Scroller::moved(const QPointF &pos)
     _lastMousePos = pos;
 
     // Calculate the force
-    //const double FORCE_FACTOR = -0.01;
     const double FORCE_FACTOR = -0.02;
     QPointF force = distance * FORCE_FACTOR;
 
     _velocity += force * time;
     _scrollPos += 0.5 * force * time * time;
+
+    // Stay within the extent
+    enforceBounds();
 
     // Enable refresh
     emit enableRefresh(!_velocity.isNull());
@@ -114,9 +122,7 @@ void Scroller::timeStep()
 
     // Evaluate each time step
     const double TIME_STEP = 0.01;
-    //const double FRICTION = 0.1;
-    const double FRICTION = 0.2;
-    //const double FORCE_DECAY = 4.0;
+    const double DRAG = 0.17;
     const double CUTOFF = 2.0/1000.0;
     QPointF totalForce;
 
@@ -125,8 +131,7 @@ void Scroller::timeStep()
     while (totalTime > 0.0)
     {
         // Add in friction
-        totalForce = - _velocity * FRICTION;
-        //_velocity *= exp(-time/400.0);
+        totalForce = - _velocity * DRAG;
 
         // Simple acceleration
         _velocity += totalForce * time;
@@ -146,6 +151,34 @@ void Scroller::timeStep()
         // Go to the next time step
         totalTime -= time;
         time = min(totalTime, TIME_STEP);
+    }
+
+    // Stay within the extent
+    enforceBounds();
+}
+
+void Scroller::enforceBounds()
+{
+    if (_scrollPos.x() < 0.0)
+    {
+        _scrollPos.setX(0.0);
+        _velocity.setX(0.0);
+    }
+    else if (_scrollPos.x() > _extent.width())
+    {
+        _scrollPos.setX(_extent.width());
+        _velocity.setX(0.0);
+    }
+
+    if (_scrollPos.y() < 0.0)
+    {
+        _scrollPos.setY(0.0);
+        _velocity.setY(0.0);
+    }
+    else if (_scrollPos.y() > _extent.height())
+    {
+        _scrollPos.setY(_extent.height());
+        _velocity.setY(0.0);
     }
 }
 
