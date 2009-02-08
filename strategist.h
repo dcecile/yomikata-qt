@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include "displaymetrics.h"
+
 class QMutex;
 
 class Book;
@@ -23,12 +25,13 @@ public:
 
     void reset();
 
+    DisplayMetrics pageLayout();
     QRect pageLayout(int index);
 
     bool isFullPageSizeKnown(int index);
     void setFullPageSize(int index, QSize size);
 
-    void setViewport(const QSize &size);
+    void setViewport(const QSize &fullSize, const QSize &viewSize);
 
 signals:
     void recievedFullPageSize(int index);
@@ -39,9 +42,10 @@ private:
     static const double DUAL_PAGE_RATIO;
 
 private:
-    void layOutPages(QRect *rect0, QRect *rect1, QSize fullSize0, QSize fullSize1);
+    DisplayMetrics pageLayout(int page0, int page1);
+    DisplayMetrics layOutPages(QSize fullSize0, QSize fullSize1);
     void convertToLargestHeight(QSize *size0, QSize *size1);
-    QRect layOutPage(QSize fullSize);
+    DisplayMetrics layOutPage(QSize fullSize);
 
 private:
     QMutex &_lock;

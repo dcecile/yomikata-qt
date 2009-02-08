@@ -25,7 +25,7 @@ Steward::Steward(QObject *parent)
     connect(&_indexer, SIGNAL(built()), SLOT(indexerBuilt()));
     connect(&_strategist, SIGNAL(recievedFullPageSize(int)), SLOT(recievedFullPageSize(int)));
     connect(&_artificer, SIGNAL(pageDecoded(int, QPixmap)), SLOT(decodeDone(int, QPixmap)));
-    connect(&_projector, SIGNAL(resized(const QSize&)), SLOT(viewportResized(const QSize&)));
+    connect(&_projector, SIGNAL(resized(const QSize&, const QSize&)), SLOT(viewportResized(const QSize&, const QSize&)));
 
     _buildingIndexer = false;
 }
@@ -54,8 +54,7 @@ void Steward::reset(const QString &filename)
     // Pretend two page book, show loading
     _book.reset(2);
     _strategist.reset();
-    _projector.showLoading0(_strategist.pageLayout(0));
-    _projector.showLoading1(_strategist.pageLayout(1));
+    _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
 
     // Start the indexerer
     _indexer.reset(filename);
@@ -71,7 +70,7 @@ void Steward::indexerBuilt()
     // Don't do anything with an empty book
     if (_indexer.numPages() == 0)
     {
-        _projector.showBlank();
+        _projector.setDisplay(DisplayMetrics(), QPixmap(), QPixmap());
         return;
     }
 
@@ -114,26 +113,16 @@ void Steward::pageChanged()
 {
     // Show the current page(s)
     loadPages();
-
-    // Start scroll to the start of the pages
-    _projector.pagesChanged();
 }
 
 void Steward::loadPages()
 {
-    // Show the current page(s)
+    // Display loading
+    _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
+
+    // Decode both pages
     int current0 = _book.page0();
     int current1 = _book.page1();
-
-    _projector.showBlank();
-
-    _projector.showLoading0(_strategist.pageLayout(current0));
-
-    if (current1 >= 0)
-    {
-        _projector.showLoading1(_strategist.pageLayout(current1));
-    }
-
     _artificer.decodePages(current0, current1);
 }
 
@@ -149,12 +138,12 @@ void Steward::decodeDone(int index, QPixmap page)
 
     if (index == current0)
     {
-        QRect layout = _strategist.pageLayout(index);
+        DisplayMetrics displayMetrics = _strategist.pageLayout();
 
         // Show the page if it's correct
-        if (page.size() == layout.size())
+        if (page.size() == displayMetrics.pages[0].size())
         {
-            _projector.showPage0(layout, page);
+            _projector.updateDisplay(displayMetrics, page, QPixmap());
         }
         // Or try decoding again, if needed
         else
@@ -165,12 +154,12 @@ void Steward::decodeDone(int index, QPixmap page)
     }
     else if (index == current1)
     {
-        QRect layout = _strategist.pageLayout(index);
+        DisplayMetrics displayMetrics = _strategist.pageLayout();
 
         // Show the page if it's correct
-        if (page.size() == layout.size())
+        if (page.size() == displayMetrics.pages[1].size())
         {
-            _projector.showPage1(layout, page);
+            _projector.updateDisplay(displayMetrics, QPixmap(), page);
         }
         // Or try decoding again, if needed
         else
@@ -181,19 +170,18 @@ void Steward::decodeDone(int index, QPixmap page)
     }
 }
 
-void Steward::viewportResized(const QSize &size)
+void Steward::viewportResized(const QSize &fullSize, const QSize &viewSize)
 {
-    debug()<<"Resized"<<size;
+    debug()<<"Resized"<<fullSize;
 
     // Notify the strategist
-    _strategist.setViewport(size);
+    _strategist.setViewport(fullSize, viewSize);
 
     // Check if the book is being opened
     if (_buildingIndexer)
     {
-        // Resize the loading dialogs
-        _projector.showLoading0(_strategist.pageLayout(0));
-        _projector.showLoading1(_strategist.pageLayout(1));
+        // Resize the loading indicators
+        _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
     }
     // Check that there is a book
     else if (_book.numPages() > 0)
@@ -214,12 +202,7 @@ void Steward::recievedFullPageSize(int index)
 
     if (current0 == index || current1 == index)
     {
-        _projector.updatePosition0(_strategist.pageLayout(current0));
-
-        if (current1 >= 0)
-        {
-            _projector.updatePosition1(_strategist.pageLayout(current1));
-        }
+        _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
     }
 }
 

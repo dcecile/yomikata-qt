@@ -38,7 +38,7 @@ public slots:
 private slots:
     void indexerBuilt();
     void decodeDone(int index, QPixmap page);
-    void viewportResized(const QSize &size);
+    void viewportResized(const QSize &fullSize, const QSize &viewSize);
     void recievedFullPageSize(int index);
     void dualCausedPageChange();
 

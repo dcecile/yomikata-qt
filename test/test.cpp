@@ -4,6 +4,7 @@
 #include "main.h"
 
 #include "booktest.h"
+#include "strategisttest.h"
 
 int main(int argc, char **argv)
 {
@@ -18,13 +19,15 @@ int main(int argc, char **argv)
     QString testName(argv[1]);
 
     // Check if the main program should be run
-    if (testName == "main") {
+    if (testName == "main")
+    {
         // Argument list is shortened by one
         char **params = new char * [argc - 1];
 
         // Put all but the the second argument in
         params[0] = argv[0];
-        for (int i = 2; i < argc; i++) {
+        for (int i = 2; i < argc; i++)
+        {
             params[i - 1] = argv[i];
         }
 
@@ -33,20 +36,31 @@ int main(int argc, char **argv)
 
         // Delete the new argument list
         delete [] params;
-    } else {
+    }
+    else
+    {
         QStringList params;
 
         // Put all but the the second argument in
         params<<argv[0];
-        for (int i = 2; i < argc; i++) {
+        for (int i = 2; i < argc; i++)
+        {
             params<<argv[i];
         }
 
         // Choose the test
-        if (testName == "book") {
+        if (testName == "book")
+        {
             BookTest bookTest;
             result = QTest::qExec(&bookTest, params);
-        } else {
+        }
+        else if (testName == "strategist")
+        {
+            StrategistTest strategistTest;
+            result = QTest::qExec(&strategistTest, params);
+        }
+        else
+        {
             // TODO Handle unknown test name
             Q_ASSERT(false);
         }

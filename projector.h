@@ -9,6 +9,8 @@
 #include "loadingsprite.h"
 #include "pagesprite.h"
 
+struct DisplayMetrics;
+
 class Projector : public QWidget
 {
     Q_OBJECT
@@ -17,32 +19,22 @@ public:
     Projector(QWidget *parent = NULL);
     ~Projector();
 
-    void showBlank();
-
-    void showLoading0(const QRect &rect);
-    void showLoading1(const QRect &rect);
-    void showPage0(const QRect &rect, QPixmap pixmap);
-    void showPage1(const QRect &rect, QPixmap pixmap);
-
-    void updatePosition0(const QRect &rect);
-    void updatePosition1(const QRect &rect);
+    void setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
+    void updateDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
 
     QSize sizeHint() const;
     int heightForWidth(int width) const;
 
-public slots:
-    void pagesChanged();
-
 signals:
-    void resized(const QSize &size);
+    void resized(const QSize &fullSize, const QSize &viewSize);
 
 private:
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
-    void wheelEvent(QWheelEvent *event);
 
 private slots:
     void refresh();
+    void enableRefresh(bool enable);
 
 private:
     static const double MAGNIFICATION;
@@ -55,6 +47,7 @@ private:
     PageSprite _pageSprite0;
     PageSprite _pageSprite1;
     QTimer _refreshTimer;
+    bool _refreshRequested;
 };
 
 #endif

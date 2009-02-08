@@ -21,7 +21,7 @@ Scroller::Scroller(QWidget *parent)
     _parent->setMouseTracking(true);
 
     // Hide the cursor
-    //_viewport->setCursor(Qt::BlankCursor);
+    //_parent->setCursor(Qt::BlankCursor);
 
     // Become an event filter
     _parent->installEventFilter(this);
@@ -40,22 +40,23 @@ Scroller::~Scroller()
 {
 }
 
-void Scroller::setExtent(const QSize &size)
+void Scroller::reset(const QSize &extent)
 {
 }
 
-void Scroller::reset()
+QPoint Scroller::position()
 {
-}
+    // Finish with the last force parameters
+    timeStep();
 
-void Scroller::stopScrolling()
-{
-    _velocity = QPointF(0.0, 0.0);
-}
+    // Disable refresh if stopped
+    if (_velocity.isNull())
+    {
+        emit enableRefresh(false);
+    }
 
-QPoint position()
-{
-    return QPoint();
+    // Return the current position
+    return _scrollPos.toPoint();
 }
 
 bool Scroller::eventFilter(QObject *watched, QEvent *event)
@@ -96,6 +97,10 @@ void Scroller::moved(const QPointF &pos)
 
     _velocity += force * time;
     _scrollPos += 0.5 * force * time * time;
+
+    // Enable refresh
+    emit enableRefresh(!_velocity.isNull());
+
 }
 
 void Scroller::timeStep()

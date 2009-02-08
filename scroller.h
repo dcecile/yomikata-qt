@@ -17,14 +17,12 @@ public:
     Scroller(QWidget *parent);
     ~Scroller();
 
-    void setExtent(const QSize &size);
-    void reset();
-    void stopScrolling();
+    void reset(const QSize &extent);
 
     QPoint position();
 
 signals:
-    void enableUpdates(bool enable);
+    void enableRefresh(bool enable);
 
 private:
     bool eventFilter(QObject *watched, QEvent *event);

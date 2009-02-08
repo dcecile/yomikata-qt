@@ -28,6 +28,19 @@ void Strategist::reset()
     _fullSizes.resize(_numPages);
 }
 
+DisplayMetrics Strategist::pageLayout()
+{
+    QMutexLocker locker(&_lock);
+
+    // Invalid viewport size means the widget is not set up
+    if (!_viewport.isValid())
+    {
+        return DisplayMetrics();
+    }
+
+    return pageLayout(_book.page0(), _book.page1());
+}
+
 QRect Strategist::pageLayout(int index)
 {
     QMutexLocker locker(&_lock);
@@ -57,6 +70,20 @@ QRect Strategist::pageLayout(int index)
         page1 = _book.pairedPage(index);
     }
 
+    DisplayMetrics displayMetrics = pageLayout(page0, page1);
+
+    if (page0 == index)
+    {
+        return displayMetrics.pages[0];
+    }
+    else
+    {
+        return displayMetrics.pages[1];
+    }
+}
+
+DisplayMetrics Strategist::pageLayout(int page0, int page1)
+{
     // Retrieve the full size
     QSize fullSize0 = _fullSizes[page0];
 
@@ -79,19 +106,7 @@ QRect Strategist::pageLayout(int index)
         }
 
         // Calculate layout for both pages
-        QRect rect0;
-        QRect rect1;
-        layOutPages(&rect0, &rect1, fullSize0, fullSize1);
-
-        // Return the matching page
-        if (page0 == index)
-        {
-            return rect0;
-        }
-        else
-        {
-            return rect1;
-        }
+        return layOutPages(fullSize0, fullSize1);
     }
     // One page
     else
@@ -101,32 +116,37 @@ QRect Strategist::pageLayout(int index)
     }
 }
 
-void Strategist::layOutPages(QRect *rect0, QRect *rect1, QSize fullSize0, QSize fullSize1)
+DisplayMetrics Strategist::layOutPages(QSize fullSize0, QSize fullSize1)
 {
     // Scale the sizes to eachother so their heights match
     convertToLargestHeight(&fullSize0, &fullSize1);
 
     // Scale the combined rect and centre it
-    QRect combinedTarget = layOutPage(QSize(fullSize0.width() + fullSize1.width(), fullSize0.height()));
+    DisplayMetrics displayMetrics = layOutPage(QSize(fullSize0.width() + fullSize1.width(), fullSize0.height()));
+    QRect combinedTarget = displayMetrics.pages[0];
 
     // If the two starting sizes (scaled to match heights) are the same, round
     //   the combined width down
     if (fullSize0 == fullSize1)
     {
-        combinedTarget.setWidth(combinedTarget.width() - (combinedTarget.width() % 2));
+        int rounding = combinedTarget.width() % 2;
+        combinedTarget.setWidth(combinedTarget.width() - rounding);
+        displayMetrics.slack.rwidth() += rounding;
     }
 
     // Calculate the target sizes
-    rect0->setWidth(int(
+    displayMetrics.pages[0].setWidth(int(
             double(combinedTarget.width()) * double(fullSize0.width())
             / double(fullSize0.width() + fullSize1.width()) + 0.5));
-    rect0->setHeight(combinedTarget.height());
-    rect1->setWidth(combinedTarget.width() - rect0->width());
-    rect1->setHeight(combinedTarget.height());
+    displayMetrics.pages[0].setHeight(combinedTarget.height());
+    displayMetrics.pages[1].setWidth(combinedTarget.width() - displayMetrics.pages[0].width());
+    displayMetrics.pages[1].setHeight(combinedTarget.height());
 
     // Position the target rectangles
-    rect0->moveTo(combinedTarget.topLeft());
-    rect1->moveTo(combinedTarget.topLeft() + QPoint(rect0->width(), 0));
+    displayMetrics.pages[0].moveTo(combinedTarget.topLeft());
+    displayMetrics.pages[1].moveTo(combinedTarget.topLeft() + QPoint(displayMetrics.pages[0].width(), 0));
+
+    return displayMetrics;
 }
 
 void Strategist::convertToLargestHeight(QSize *size0, QSize *size1)
@@ -169,8 +189,10 @@ void Strategist::convertToLargestHeight(QSize *size0, QSize *size1)
     Q_ASSERT(size0->height() == size1->height());
 }
 
-QRect Strategist::layOutPage(QSize fullSize)
+DisplayMetrics Strategist::layOutPage(QSize fullSize)
 {
+    DisplayMetrics displayMetrics;
+
     // Fit into the viewport
     fullSize.scale(_viewport, Qt::KeepAspectRatio);
 
@@ -178,8 +200,10 @@ QRect Strategist::layOutPage(QSize fullSize)
     QPoint topLeft(int(double(_viewport.width() - fullSize.width()) / 2.0 + 0.5),
                    int(double(_viewport.height() - fullSize.height()) / 2.0 + 0.5));
 
-    // Return the rect
-    return QRect(topLeft, fullSize);
+    // Set the rect
+    displayMetrics.pages[0] = QRect(topLeft, fullSize);
+
+    return displayMetrics;
 }
 
 bool Strategist::isFullPageSizeKnown(int index)
@@ -212,10 +236,10 @@ void Strategist::setFullPageSize(int index, QSize size)
     emit recievedFullPageSize(index);
 }
 
-void Strategist::setViewport(const QSize &size)
+void Strategist::setViewport(const QSize &fullSize, const QSize &viewSize)
 {
     QMutexLocker locker(&_lock);
-    _viewport = size;
+    _viewport = fullSize;
 }
 
 #include "strategist.moc"

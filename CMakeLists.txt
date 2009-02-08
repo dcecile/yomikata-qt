@@ -44,6 +44,7 @@ set(test_SRCS
 # Unit tests
 set(test_CLASSES
     book
+    strategist
 )
 
 # TODO install into the build directory by default
