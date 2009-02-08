@@ -2,8 +2,12 @@
 
 #include <QMutex>
 
+#include <algorithm>
+
 #include "debug.h"
 #include "book.h"
+
+using std::max;
 
 const int Strategist::DEFAULT_WIDTH = 934;
 const int Strategist::DEFAULT_HEIGHT = 1500;
@@ -131,7 +135,7 @@ DisplayMetrics Strategist::layOutPages(QSize fullSize0, QSize fullSize1)
     {
         int rounding = combinedTarget.width() % 2;
         combinedTarget.setWidth(combinedTarget.width() - rounding);
-        displayMetrics.slack.rwidth() += rounding;
+        displayMetrics.slack.setWidth(max(0, displayMetrics.slack.width() - rounding));
     }
 
     // Calculate the target sizes
@@ -196,12 +200,40 @@ DisplayMetrics Strategist::layOutPage(QSize fullSize)
     // Fit into the viewport
     fullSize.scale(_viewport, Qt::KeepAspectRatio);
 
-    // Centre the image in the full area
-    QPoint topLeft(int(double(_viewport.width() - fullSize.width()) / 2.0 + 0.5),
-                   int(double(_viewport.height() - fullSize.height()) / 2.0 + 0.5));
+    // Centre or allow for scrolling as needed
+    QPoint topLeft;
+
+    // Set left
+    if (fullSize.width() > _visibleSize.width())
+    {
+        // Push left (too big to centre)
+        topLeft.setX(0);
+    }
+    else
+    {
+        // Centre width
+        topLeft.setX(int(double(_visibleSize.width() - fullSize.width()) / 2.0 + 0.5));
+    }
+
+    // Set top
+    if (fullSize.height() > _visibleSize.height())
+    {
+        // Push up (too big to centre)
+        topLeft.setY(0);
+    }
+    else
+    {
+        // Centre height
+        topLeft.setY(int(double(_visibleSize.height() - fullSize.height()) / 2.0 + 0.5));
+    }
 
     // Set the rect
     displayMetrics.pages[0] = QRect(topLeft, fullSize);
+
+    // Measure the slack
+    displayMetrics.slack = QSize(
+        max(0, fullSize.width() - _visibleSize.width()),
+        max(0, fullSize.height() - _visibleSize.height()));
 
     return displayMetrics;
 }
@@ -240,6 +272,7 @@ void Strategist::setViewport(const QSize &fullSize, const QSize &viewSize)
 {
     QMutexLocker locker(&_lock);
     _viewport = fullSize;
+    _visibleSize = viewSize;
 }
 
 #include "strategist.moc"

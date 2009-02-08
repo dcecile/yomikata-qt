@@ -51,6 +51,7 @@ private:
     QMutex &_lock;
     Book &_book;
     QSize _viewport;
+    QSize _visibleSize;
     int _numPages;
     vector<QSize> _fullSizes;
 };

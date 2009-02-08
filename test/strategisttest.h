@@ -18,6 +18,7 @@ public:
 
 private slots:
     void simple();
+    void zoom();
 
 private:
     QMutex _lock;
