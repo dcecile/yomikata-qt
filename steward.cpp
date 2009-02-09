@@ -143,6 +143,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Show the page if it's correct
         if (page.size() == displayMetrics.pages[0].size())
         {
+            qDebug()<<"Page 0"<<displayMetrics.pages[0].topLeft();
             _projector.updateDisplay(displayMetrics, page, QPixmap());
         }
         // Or try decoding again, if needed
@@ -159,6 +160,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Show the page if it's correct
         if (page.size() == displayMetrics.pages[1].size())
         {
+            qDebug()<<"Page 1"<<displayMetrics.pages[1].topLeft();
             _projector.updateDisplay(displayMetrics, QPixmap(), page);
         }
         // Or try decoding again, if needed

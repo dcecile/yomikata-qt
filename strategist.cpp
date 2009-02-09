@@ -42,7 +42,10 @@ DisplayMetrics Strategist::pageLayout()
         return DisplayMetrics();
     }
 
-    return pageLayout(_book.page0(), _book.page1());
+    int page0 = _book.page0();
+    int page1 = _book.page1();
+
+    return pageLayout(page0, page1);
 }
 
 QRect Strategist::pageLayout(int index)
@@ -62,10 +65,10 @@ QRect Strategist::pageLayout(int index)
     int page1;
 
     // Target page is second
-    if (_book.pairedPageOffset(index) == 1)
+    if (_book.pairedPageOffset(index) == -1)
     {
+        page0 = index - 1;
         page1 = index;
-        page0 = index + 1;
     }
     // Target page is first or solitary
     else
@@ -147,8 +150,10 @@ DisplayMetrics Strategist::layOutPages(QSize fullSize0, QSize fullSize1)
     displayMetrics.pages[1].setHeight(combinedTarget.height());
 
     // Position the target rectangles
-    displayMetrics.pages[0].moveTo(combinedTarget.topLeft());
-    displayMetrics.pages[1].moveTo(combinedTarget.topLeft() + QPoint(displayMetrics.pages[0].width(), 0));
+
+    // Manga mode
+    displayMetrics.pages[1].moveTo(combinedTarget.topLeft());
+    displayMetrics.pages[0].moveTo(combinedTarget.topLeft() + QPoint(displayMetrics.pages[1].width(), 0));
 
     return displayMetrics;
 }

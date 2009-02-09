@@ -21,7 +21,17 @@
 #define SLACK(w, h) \
     do \
     { \
-            QCOMPARE(_strategist.pageLayout().slack, QSize((w), (h))); \
+        QCOMPARE(_strategist.pageLayout().slack, QSize((w), (h))); \
+    } \
+    while (0)
+
+#define METRICS(x0, y0, w0, h0, x1, y1, w1, h1, slackW, slackH) \
+    do \
+    { \
+        DisplayMetrics temp = _strategist.pageLayout();\
+        QCOMPARE(temp.pages[0], QRect((x0), (y0), (w0), (h0))); \
+        QCOMPARE(temp.pages[1], QRect((x1), (y1), (w1), (h1))); \
+        QCOMPARE(temp.slack, QSize((slackW), (slackH))); \
     } \
     while (0)
 
@@ -131,6 +141,21 @@ void StrategistTest::zoom()
     FIT(1, 8, 0, 42, 100);
     FIT(0, 50, 0, 42, 100);
     SLACK(0, 50);
+}
+
+void StrategistTest::metrics()
+{
+    // Regular
+    _strategist.setViewport(QSize(100, 50), QSize(100, 50));
+    SET(0, 140, 200);
+    SET(1, 80, 100);
+    METRICS(53, 0, 35, 50, 13, 0, 40, 50, 0, 0);
+
+    // Zoomed
+    _strategist.setViewport(QSize(200, 100), QSize(100, 50));
+    SET(0, 165, 200);
+    SET(1, 165, 200);
+    METRICS(82, 0, 82, 100, 0, 0, 82, 100, 64, 50);
 }
 
 #include "strategisttest.moc"
