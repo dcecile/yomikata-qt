@@ -11,6 +11,8 @@
 
 using std::vector;
 
+class Archive;
+
 /**
  * @todo Cancel if being deconstructed.
  * @todo Allow parsing/program errors.
@@ -20,7 +22,7 @@ class ArchiveLister : public QObject
     Q_OBJECT
 
 public:
-    ArchiveLister(const QString &archivePath, QObject *parent);
+    ArchiveLister(const Archive &archive, QObject *parent);
     ~ArchiveLister();
 
     void start();
@@ -43,8 +45,7 @@ private:
     static const int KILL_WAIT = 100;
 
 private:
-    FileClassification::ArchiveType _archiveType;
-    QString _archivePath;
+    const Archive &_archive;
 
     QProcess _process;
 

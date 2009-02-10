@@ -2,14 +2,14 @@
 
 #include <QTextCodec>
 
+#include "archive.h"
 #include "debug.h"
 
-ArchiveLister::ArchiveLister(const QString &archivePath, QObject *parent)
-    : QObject(parent)
-{
-    _archiveType = FileClassification::getArchiveType(archivePath);
-    _archivePath = archivePath;
+// 7z l -slt Ranma_v01.7z
 
+ArchiveLister::ArchiveLister(const Archive &archive, QObject *parent)
+    : QObject(parent), _archive(archive)
+{
     // Connect to the extracter process
     connect(&_process, SIGNAL(readyReadStandardError()),
              this, SLOT(errorText()));
@@ -57,48 +57,41 @@ void ArchiveLister::start()
     _currentInputLine = "";
 
     // Determine the executable and parameters used to list the archive
-    QString command;
     QStringList args;
-    switch (_archiveType)
+    switch (_archive.type())
     {
-        case FileClassification::Tar:
-            command = "tar";
+        case Archive::Tar:
             args<<"-tvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassification::TarGz:
-            command = "tar";
+        case Archive::TarGz:
             args<<"-ztvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassification::TarBz:
-            command = "tar";
+        case Archive::TarBz:
             args<<"--bzip2"<<"-tvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassification::TarZ:
-            command = "tar";
+        case Archive::TarZ:
             args<<"-Ztvf";
             _numFields = 5;
             _sizeField = 2;
             break;
-        case FileClassification::Zip:
-            command = "unzip";
+        case Archive::Zip:
             args<<"-l"<<"-qq";
             _numFields = 3;
             _sizeField = 0;
             break;
-        case FileClassification::Rar:
-            command = "unrar";
+        case Archive::Rar:
             args<<"vr";
             break;
         default:
             Q_ASSERT(false);
     }
-    args<<_archivePath;
+    args<<_archive.filename();
 
     // Connect to the process
     disconnect(&_process, SIGNAL(readyReadStandardOutput()),
@@ -106,7 +99,7 @@ void ArchiveLister::start()
     disconnect(&_process, SIGNAL(readyReadStandardOutput()),
                 this, SLOT(rarOutputText()));
 
-    if (_archiveType != FileClassification::Rar)
+    if (_archive.type() != Archive::Rar)
     {
         connect(&_process, SIGNAL(readyReadStandardOutput()),
                  this, SLOT(nonRarOutputText()));
@@ -118,7 +111,7 @@ void ArchiveLister::start()
     }
 
     // Start the process listing
-    _process.start(command, args);
+    _process.start(_archive.programPath(), args);
 }
 
 void ArchiveLister::nonRarOutputText()
@@ -186,7 +179,7 @@ void ArchiveLister::nonRarOutputText()
                 // Unzip has huge problems with filenames, so try to clean them up a bit
                 // For example, it can't handle '[' or ']' in the path
                 //  or filenames encoded from a non-UTF charset like Shift-JIS
-                if (_archiveType == FileClassification::Zip)
+                if (_archive.type() == Archive::Zip)
                 {
                     filename = cleanZipFilename(filename);
                 }

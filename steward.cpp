@@ -4,6 +4,7 @@
 
 #include "debug.h"
 #include "book.h"
+#include "archive.h"
 #include "indexer.h"
 #include "strategist.h"
 #include "artificer.h"
@@ -14,9 +15,10 @@ Steward::Steward(QObject *parent)
     : QObject(parent),
     _lock(QMutex::Recursive),
     _book(*new Book(_lock, this)),
-    _indexer(*new Indexer(this)),
+    _archive(*new Archive(this)),
+    _indexer(*new Indexer(_archive, this)),
     _strategist(*new Strategist(_book, _lock, this)),
-    _artificer(*new Artificer(_indexer, _strategist, this)),
+    _artificer(*new Artificer(_archive, _indexer, _strategist, this)),
     _projector(*new Projector(NULL)),
     _debugWidget(new DebugWidget(_book, NULL))
 {
@@ -56,8 +58,11 @@ void Steward::reset(const QString &filename)
     _strategist.reset();
     _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
 
+    // Retrieve the archive information
+    _archive.reset(filename);
+
     // Start the indexerer
-    _indexer.reset(filename);
+    _indexer.reset();
 
     // And wait
     _buildingIndexer = true;

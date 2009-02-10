@@ -9,6 +9,7 @@
 
 using std::vector;
 
+class Archive;
 class ArchiveLister;
 
 /**
@@ -19,13 +20,12 @@ class Indexer : public QObject
     Q_OBJECT
 
 public:
-    Indexer(QObject *parent = NULL);
+    Indexer(const Archive &archive, QObject *parent = NULL);
     ~Indexer();
 
-    void reset(const QString &filename);
+    void reset();
 
     int numPages() const;
-    QString filename() const;
     QString pageName(int indexer) const;
 
 signals:
@@ -46,7 +46,7 @@ private:
     };
 
 private:
-    QString _filename;
+    const Archive &_archive;
     vector<FileInfo> _files;
 
     ArchiveLister *_archiveLister;

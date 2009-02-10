@@ -8,6 +8,7 @@ set(yomikata_SRCS
     artificer.cpp
     strategist.cpp
     book.cpp
+    archive.cpp
     indexer.cpp
     projector.cpp
 

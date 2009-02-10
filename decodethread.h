@@ -8,6 +8,7 @@
 #include <QWaitCondition>
 #include <QStringList>
 
+class Archive;
 class Indexer;
 class Strategist;
 
@@ -16,7 +17,7 @@ class DecodeThread : public QThread
     Q_OBJECT
 
 public:
-    DecodeThread(const Indexer &indexer, Strategist &strategist, QObject *parent);
+    DecodeThread(const Archive &archive, const Indexer &indexer, Strategist &strategist, QObject *parent);
     ~DecodeThread();
 
     void reset();
@@ -40,6 +41,7 @@ private:
     static const int KILL_WAIT = 50;
 
 private:
+    const Archive &_archive;
     const Indexer &_indexer;
     Strategist &_strategist;
 

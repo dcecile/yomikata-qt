@@ -5,12 +5,15 @@
 #include <QImageReader>
 
 #include "debug.h"
+#include "archive.h"
 #include "indexer.h"
 #include "strategist.h"
 #include "fileclassification.h"
 
-DecodeThread::DecodeThread(const Indexer &indexer, Strategist &strategist, QObject *parent)
-    : QThread(parent), _indexer(indexer), _strategist(strategist)
+//7z e -so Ranma_v01.7z '-i!Ranma/*27.jpg'
+
+DecodeThread::DecodeThread(const Archive &archive, const Indexer &indexer, Strategist &strategist, QObject *parent)
+    : QThread(parent), _archive(archive), _indexer(indexer), _strategist(strategist)
 {
     _pageNum = -1;
     _requestPageNum = -1;
@@ -121,36 +124,30 @@ void DecodeThread::run()
 
 void DecodeThread::setExtractCommand()
 {
-    QString archive = _indexer.filename();
-    FileClassification::ArchiveType archiveType = FileClassification::getArchiveType(archive);
+    // Set the command
+    _command = _archive.programPath();
 
     // Choose the right tool and options
     _args.clear();
 
-    switch (archiveType)
+    switch (_archive.type())
     {
-        case FileClassification::Tar:
-            _command = "tar";
+        case Archive::Tar:
             _args<<"-xOf";
             break;
-        case FileClassification::TarGz:
-            _command = "tar";
+        case Archive::TarGz:
             _args<<"-zxOf";
             break;
-        case FileClassification::TarBz:
-            _command = "tar";
+        case Archive::TarBz:
             _args<<"--bzip2"<<"-xOf";
             break;
-        case FileClassification::TarZ:
-            _command = "tar";
+        case Archive::TarZ:
             _args<<"-ZxOf";
             break;
-        case FileClassification::Zip:
-            _command = "unzip";
+        case Archive::Zip:
             _args<<"-p";
             break;
-        case FileClassification::Rar:
-            _command = "unrar";
+        case Archive::Rar:
             _args<<"p"<<"-ierr";
             // Note: With "-ierr", the header info is put into stderr (and ignored here)
             break;
@@ -159,7 +156,7 @@ void DecodeThread::setExtractCommand()
     }
 
     // Pass in the file name
-    _args<<archive;
+    _args<<_archive.filename();
 
     debug()<<"Extract command set:"<<_command<<_args;
 }

@@ -3,13 +3,13 @@
 #include "decodethread.h"
 #include "debug.h"
 
-Artificer::Artificer(const Indexer &indexer, Strategist &strategist, QObject *parent)
+Artificer::Artificer(const Archive &archive, const Indexer &indexer, Strategist &strategist, QObject *parent)
     : QObject(parent)
 {
     // Create, connect to, and start the threads
     for (int i = 0; i < DECODE_THREADS; i++)
     {
-        _decodeThreads[i] = new DecodeThread(indexer, strategist, this);
+        _decodeThreads[i] = new DecodeThread(archive, indexer, strategist, this);
         connect(_decodeThreads[i],
                 SIGNAL(done(DecodeThread*, int, QImage)),
                 SLOT(decodeThreadDone(DecodeThread*, int, QImage)));

@@ -7,8 +7,8 @@
 
 using std::sort;
 
-Indexer::Indexer(QObject *parent)
-    : QObject(parent)
+Indexer::Indexer(const Archive &archive, QObject *parent)
+    : QObject(parent), _archive(archive)
 {
     _archiveLister = NULL;
 }
@@ -17,10 +17,8 @@ Indexer::~Indexer()
 {
 }
 
-void Indexer::reset(const QString &filename)
+void Indexer::reset()
 {
-    _filename = filename;
-
     // Stop any current lister
     if (_archiveLister != NULL)
     {
@@ -31,7 +29,7 @@ void Indexer::reset(const QString &filename)
     _files.clear();
 
     // Create a new archive lister
-    _archiveLister = new ArchiveLister(_filename, this);
+    _archiveLister = new ArchiveLister(_archive, this);
 
     // Connect to it
     connect(_archiveLister, SIGNAL(entryFound(const QString &, int, int)),
@@ -48,11 +46,6 @@ void Indexer::reset(const QString &filename)
 int Indexer::numPages() const
 {
     return _files.size();
-}
-
-QString Indexer::filename() const
-{
-    return _filename;
 }
 
 QString Indexer::pageName(int indexer) const

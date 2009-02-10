@@ -9,6 +9,7 @@
 class QWidget;
 
 class Book;
+class Archive;
 class Indexer;
 class Strategist;
 class Artificer;
@@ -49,6 +50,7 @@ private:
 private:
     QMutex _lock;
     Book &_book;
+    Archive &_archive;
     Indexer &_indexer;
     Strategist &_strategist;
     Artificer &_artificer;

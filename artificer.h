@@ -5,6 +5,7 @@
 
 #include <QPixmap>
 
+class Archive;
 class Indexer;
 class Strategist;
 class DecodeThread;
@@ -14,7 +15,7 @@ class Artificer : public QObject
     Q_OBJECT
 
 public:
-    Artificer(const Indexer &indexer, Strategist &strategist, QObject *parent = NULL);
+    Artificer(const Archive &archive, const Indexer &indexer, Strategist &strategist, QObject *parent = NULL);
     ~Artificer();
 
     void reset();
