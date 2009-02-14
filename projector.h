@@ -22,6 +22,8 @@ public:
     void setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
     void updateDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
 
+    void retrieveDisplay(QRect *rect0, QRect *rect1);
+
     QSize sizeHint() const;
     int heightForWidth(int width) const;
 

@@ -127,18 +127,20 @@ void Artificer::decodeThreadDone(DecodeThread *decodeThread, int index, QImage i
 void Artificer::decodeThreadCancelled(DecodeThread *decodeThread)
 {
     // Cancelled
-    debug()<<"Cancelled";
+    debug()<<"Cancelled"<<decodeThread->currentPageNum();
 
     // Start a new decode if needed
     if (decodeThread->currentPageNum() == -1)
     {
         if (_request0 >= 0)
         {
+            debug()<<"Starting"<<_request0;
             decodeThread->decode(_request0);
             _request0 = -1;
         }
         else if (_request1 >= 0)
         {
+            debug()<<"Starting"<<_request1;
             decodeThread->decode(_request1);
             _request1 = -1;
         }

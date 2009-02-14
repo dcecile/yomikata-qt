@@ -34,7 +34,6 @@ private:
     void run();
     void setExtractCommand();
     void decode();
-    void prepareForRequest();
 
 private:
     static const int CANCELLED_POLLING = 50;
@@ -52,6 +51,7 @@ private:
     volatile int _requestPageNum;
 
     volatile int _pageNum;
+    QImage _image;
 
     volatile bool _cancelled;
 

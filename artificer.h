@@ -30,7 +30,7 @@ private slots:
     void decodeThreadCancelled(DecodeThread *decodeThread);
 
 private:
-    static const int DECODE_THREADS = 2;
+    static const int DECODE_THREADS = 1;
 
 private:
     DecodeThread *_decodeThreads[DECODE_THREADS];

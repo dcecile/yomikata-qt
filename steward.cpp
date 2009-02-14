@@ -85,6 +85,12 @@ void Steward::indexerBuilt()
 
     // Show the first two pages
     pageChanged();
+
+    /*next();
+    next();
+    next();
+    next();
+    next();*/
 }
 
 void Steward::next()
@@ -148,7 +154,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Show the page if it's correct
         if (page.size() == displayMetrics.pages[0].size())
         {
-            qDebug()<<"Page 0"<<displayMetrics.pages[0].topLeft();
+            //qDebug()<<"Page 0"<<displayMetrics.pages[0].topLeft();
             _projector.updateDisplay(displayMetrics, page, QPixmap());
         }
         // Or try decoding again, if needed
@@ -165,7 +171,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Show the page if it's correct
         if (page.size() == displayMetrics.pages[1].size())
         {
-            qDebug()<<"Page 1"<<displayMetrics.pages[1].topLeft();
+            //qDebug()<<"Page 1"<<displayMetrics.pages[1].topLeft();
             _projector.updateDisplay(displayMetrics, QPixmap(), page);
         }
         // Or try decoding again, if needed
@@ -199,7 +205,7 @@ void Steward::viewportResized(const QSize &fullSize, const QSize &viewSize)
 }
 
 /**
- * @todo Do something if the sizes are wrong
+ * @todo Make robust
  */
 void Steward::recievedFullPageSize(int index)
 {
@@ -209,7 +215,24 @@ void Steward::recievedFullPageSize(int index)
 
     if (current0 == index || current1 == index)
     {
-        _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
+        // Get what's displayed
+        QRect displayed0;
+        QRect displayed1;
+        _projector.retrieveDisplay(&displayed0, &displayed1);
+
+        // Get what should be displayed
+        DisplayMetrics metrics = _strategist.pageLayout();
+
+        // If either size is wrong, reload
+        if (metrics.pages[0].size() != displayed0.size() || metrics.pages[1].size() != displayed1.size())
+        {
+            loadPages();
+        }
+        // Otherwise, update the positions
+        else
+        {
+            _projector.updateDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
+        }
     }
 }
 

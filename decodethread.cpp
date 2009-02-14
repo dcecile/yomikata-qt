@@ -9,6 +9,7 @@
 #include "indexer.h"
 #include "strategist.h"
 #include "fileclassification.h"
+#include "imagesource.h"
 
 //7z e -so Ranma_v01.7z '-i!Ranma/*27.jpg'
 
@@ -75,50 +76,71 @@ void DecodeThread::cancel()
 
 void DecodeThread::run()
 {
+    // Available for requests, no current page
+    _pageNum = -1;
+
     while (true)
     {
-        // No current page
-        _requestLock.lock();
-        _pageNum = -1;
-
-        // Check if aborted during last decode
-        if (_aborted)
+        // Get the next request
         {
-            return;
+            QMutexLocker locker(&_requestLock);
+
+            // Check if aborted during last decode
+            if (_aborted)
+            {
+                return;
+            }
+
+            // Wait if no queued request
+            if (_requestPageNum == -1)
+            {
+                _decodeRequest.wait(&_requestLock);
+            }
+
+            // Stop if aborted while waiting
+            if (_aborted)
+            {
+                return;
+            }
+
+            // Reload the command if reset
+            if (_reset)
+            {
+                setExtractCommand();
+                _reset = false;
+            }
+
+            // Set the page number
+            _pageNum = _requestPageNum;
+            _requestPageNum = -1;
+
+            // Done getting request parameters
         }
-
-        // Check for a queued request
-        if (_requestPageNum == -1)
-        {
-            // Wait for a request
-            _decodeRequest.wait(&_requestLock);
-        }
-
-        // Check if aborted while waiting
-        if (_aborted)
-        {
-            return;
-        }
-
-        // Check if reset
-        if (_reset)
-        {
-            setExtractCommand();
-            _reset = false;
-        }
-
-        // Set the page number
-        _pageNum = _requestPageNum;
-        _requestPageNum = -1;
-
-        // Done getting request parameters
-        _requestLock.unlock();
 
         // Not cancelled
         _cancelled = false;
 
         // Start the decode
         decode();
+
+        // Available for requests, no current page
+        int lastPage = _pageNum;
+        {
+            QMutexLocker locker(&_requestLock);
+            _pageNum = -1;
+        }
+
+        // Give notification
+        if (!_cancelled)
+        {
+            // Done
+            emit done(this, lastPage, _image);
+        }
+        else
+        {
+            // Cancelled
+            emit cancelled(this);
+        }
     }
 }
 
@@ -185,7 +207,10 @@ void DecodeThread::decode()
 
     do
     {
+        QTime clock;
+        clock.start();
         waited = extracter.waitForFinished(CANCELLED_POLLING);
+        //debug()<<"Waited"<<clock.elapsed();
     }
     while (!_cancelled && !waited);
 
@@ -206,14 +231,12 @@ void DecodeThread::decode()
             extracter.kill();
         }
 
-        // Notify cancelled
-        prepareForRequest();
-        emit cancelled(this);
         return;
     }
 
     // Set up the image reader
-    QImageReader imageReader(&extracter);
+    ImageSource source(&extracter);
+    QImageReader imageReader(&source);
 
     // If the full size is known, calculate the prescaled size
     bool prescaled = _strategist.isFullPageSizeKnown(_pageNum);
@@ -228,8 +251,12 @@ void DecodeThread::decode()
     }
 
     // Decode the image
-    QImage image(imageReader.read());
-    Q_ASSERT(!image.isNull());
+    QTime clock;
+    clock.start();
+    _image = imageReader.read();
+    //debug()<<imageReader.errorString();
+    Q_ASSERT(!_image.isNull());
+    //debug()<<"Decode"<<clock.elapsed();
 
     if (!prescaled)
     {
@@ -237,7 +264,7 @@ void DecodeThread::decode()
         //  before starting decoding
 
         // Retrieve the size
-        QSize fullSize = image.size();
+        QSize fullSize = _image.size();
         Q_ASSERT(fullSize.isValid());
 
         // Save the size
@@ -246,28 +273,15 @@ void DecodeThread::decode()
         // Check if cancelled, after storing the full size
         if (_cancelled)
         {
-            prepareForRequest();
-            emit cancelled(this);
             return;
         }
 
         // Resize the image now
         QSize targetSize = _strategist.pageLayout(_pageNum).size();
-        image = image.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        _image = _image.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     }
 
     debug()<<"Decoded"<<_pageNum<<"--"<<time.elapsed()<<"ms";
-
-    // Decode job now finished
-    int pageNum = _pageNum;
-    prepareForRequest();
-    emit done(this, pageNum, image);
-}
-
-void DecodeThread::prepareForRequest()
-{
-    QMutexLocker locker(&_requestLock);
-    _pageNum = -1;
 }
 
 #include "decodethread.moc"

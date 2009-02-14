@@ -51,6 +51,7 @@ void Projector::setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &
     _isShown[1] = false;
     _isLoading[0] = true;
     _isLoading[1] = true;
+    //debug()<<"Reset";
 
     // Update to the current
     updateDisplay(displayMetrics, pixmap0, pixmap1);
@@ -67,6 +68,7 @@ void Projector::updateDisplay(const DisplayMetrics &displayMetrics, const QPixma
         if (!pixmap0.isNull())
         {
             // Pixmap loaded
+            //debug()<<"Pixmap 0"<<_isLoading[1];
             _isLoading[0] = false;
             _pageSprite0.setPixmap(pixmap0);
         }
@@ -81,6 +83,7 @@ void Projector::updateDisplay(const DisplayMetrics &displayMetrics, const QPixma
         if (!pixmap1.isNull())
         {
             // Pixmap loaded
+            //debug()<<"Pixmap 1"<<_isLoading[0];
             _isLoading[1] = false;
             _pageSprite1.setPixmap(pixmap1);
         }
@@ -88,6 +91,27 @@ void Projector::updateDisplay(const DisplayMetrics &displayMetrics, const QPixma
 
     // Schedule a repaint
     update();
+}
+
+void Projector::retrieveDisplay(QRect *rect0, QRect *rect1)
+{
+    if (_isShown[0])
+    {
+        *rect0 = _placement[0];
+    }
+    else
+    {
+        *rect0 = QRect();
+    }
+
+    if (_isShown[1])
+    {
+        *rect1 = _placement[1];
+    }
+    else
+    {
+        *rect1 = QRect();
+    }
 }
 
 void Projector::resizeEvent(QResizeEvent *event)

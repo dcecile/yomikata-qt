@@ -15,6 +15,7 @@ set(yomikata_SRCS
     archivelister.cpp
     fileclassification.cpp
     decodethread.cpp
+    imagesource.cpp
 
     scroller.cpp
     loadingsprite.cpp
