@@ -32,8 +32,9 @@ signals:
     void finished();
 
 private slots:
-    void rarOutputText();
-    void nonRarOutputText();
+    void defaultParser();
+    void rarParserText();
+    void sevenZipParser();
     void errorText();
     void error(QProcess::ProcessError error);
     void finished(int exitCode, QProcess::ExitStatus exitStatus);

@@ -11,8 +11,6 @@
 #include "fileclassification.h"
 #include "imagesource.h"
 
-//7z e -so Ranma_v01.7z '-i!Ranma/*27.jpg'
-
 DecodeThread::DecodeThread(const Archive &archive, const Indexer &indexer, Strategist &strategist, QObject *parent)
     : QThread(parent), _archive(archive), _indexer(indexer), _strategist(strategist)
 {
@@ -53,6 +51,15 @@ void DecodeThread::reset()
  */
 void DecodeThread::decode(int index)
 {
+    if (_requestLock.tryLock())
+    {
+        _requestLock.unlock();
+    }
+    else
+    {
+        debug()<<"decode blocked";
+    }
+
     QMutexLocker locker(&_requestLock);
 
     // Assert no current decode
@@ -65,12 +72,30 @@ void DecodeThread::decode(int index)
 
 int DecodeThread::currentPageNum()
 {
+    if (_requestLock.tryLock())
+    {
+        _requestLock.unlock();
+    }
+    else
+    {
+        debug()<<"currentPageNum blocked";
+    }
+
     QMutexLocker locker(&_requestLock);
     return _pageNum;
 }
 
 void DecodeThread::cancel()
 {
+    if (_cancelLock.tryLock())
+    {
+        _cancelLock.unlock();
+    }
+    else
+    {
+        debug()<<"cancel blocked";
+    }
+
     QMutexLocker locker(&_cancelLock);
 
     // Set the cancelled flag
@@ -129,8 +154,24 @@ void DecodeThread::run()
         // Not cancelled
         _cancelled = false;
 
-        // Start the decode
-        decode();
+        // Wait to see if cancelled
+        QTime clock;
+        clock.start();
+
+        for (int i = 0; i < 500 && !_cancelled; i += 10)
+        {
+            //msleep(10);
+        }
+
+        if (!_cancelled)
+        {
+            // Start the decode
+            decode();
+        }
+        else
+        {
+            debug()<<"Cancelled before started after"<<clock.elapsed()<<"ms";
+        }
 
         // Available for requests, no current page
         int lastPage = _pageNum;
@@ -182,6 +223,9 @@ void DecodeThread::setExtractCommand()
             _args<<"p"<<"-ierr";
             // Note: With "-ierr", the header info is put into stderr (and ignored here)
             break;
+        case Archive::SevenZip:
+            _args<<"e"<<"-so";
+            break;
         default:
             Q_ASSERT(false);
     }
@@ -197,15 +241,23 @@ void DecodeThread::setExtractCommand()
  */
 void DecodeThread::decode()
 {
-    QTime time;
-
-    QProcess extracter;
-
     //debug()<<"start"<<_page->getPageNumber();
+
+    QTime time;
     time.start();
 
+    // Choose a format for the filename argument
+    QString nameArgument = _indexer.pageName(_pageNum);
+
+    if (_archive.type() == Archive::SevenZip)
+    {
+        nameArgument.prepend("-i!");
+    }
+
     // Start the extracter
-    extracter.start(_command, _args + QStringList(_indexer.pageName(_pageNum)));
+    //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
+    QProcess extracter;
+    extracter.start(_command, _args + QStringList(nameArgument));
 
     // Wait for the extracter to finish
     // Note: QImageReader won't decode the whole image unless the whole
@@ -227,7 +279,7 @@ void DecodeThread::decode()
     if (_cancelled)
     {
         // Send a SIGTERM signal
-        debug()<<"Terminating extracter process";
+        debug()<<"Terminating extracter process after"<<time.elapsed()<<"ms";
         extracter.terminate();
 
         // Wait kindly for it to finish
@@ -279,6 +331,7 @@ void DecodeThread::decode()
     // Stop if cancelled
     if (_cancelled)
     {
+        debug()<<"Cancelled decode after"<<time.elapsed()<<"ms";
         return;
     }
 

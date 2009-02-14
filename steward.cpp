@@ -85,12 +85,6 @@ void Steward::indexerBuilt()
 
     // Show the first two pages
     pageChanged();
-
-    /*next();
-    next();
-    next();
-    next();
-    next();*/
 }
 
 void Steward::next()

@@ -5,8 +5,6 @@
 #include "archive.h"
 #include "debug.h"
 
-// 7z l -slt Ranma_v01.7z
-
 ArchiveLister::ArchiveLister(const Archive &archive, QObject *parent)
     : QObject(parent), _archive(archive)
 {
@@ -88,6 +86,9 @@ void ArchiveLister::start()
         case Archive::Rar:
             args<<"vr";
             break;
+        case Archive::SevenZip:
+            args<<"l"<<"-slt";
+            break;
         default:
             Q_ASSERT(false);
     }
@@ -95,26 +96,34 @@ void ArchiveLister::start()
 
     // Connect to the process
     disconnect(&_process, SIGNAL(readyReadStandardOutput()),
-                this, SLOT(nonRarOutputText()));
+                this, SLOT(defaultParser()));
     disconnect(&_process, SIGNAL(readyReadStandardOutput()),
-                this, SLOT(rarOutputText()));
+                this, SLOT(rarParserText()));
+    disconnect(&_process, SIGNAL(readyReadStandardOutput()),
+                this, SLOT(sevenZipParser()));
 
-    if (_archive.type() != Archive::Rar)
+    // Set the parser
+    if (_archive.type() == Archive::Rar)
     {
         connect(&_process, SIGNAL(readyReadStandardOutput()),
-                 this, SLOT(nonRarOutputText()));
+                 this, SLOT(rarParserText()));
+    }
+    else if (_archive.type() == Archive::SevenZip)
+    {
+        connect(&_process, SIGNAL(readyReadStandardOutput()),
+                 this, SLOT(sevenZipParser()));
     }
     else
     {
         connect(&_process, SIGNAL(readyReadStandardOutput()),
-                 this, SLOT(rarOutputText()));
+                 this, SLOT(defaultParser()));
     }
 
     // Start the process listing
     _process.start(_archive.programPath(), args);
 }
 
-void ArchiveLister::nonRarOutputText()
+void ArchiveLister::defaultParser()
 {
     QByteArray output = _process.readAllStandardOutput();
     int newLineIdx;
@@ -197,7 +206,7 @@ void ArchiveLister::nonRarOutputText()
     _currentInputLine.append(output);
 }
 
-void ArchiveLister::rarOutputText()
+void ArchiveLister::rarParserText()
 {
     if (_listingBodyFinished)
     {
@@ -272,6 +281,45 @@ void ArchiveLister::rarOutputText()
 
             // Alternate to a non-filename line
             _filenameLine = !_filenameLine;
+        }
+
+        // Start a new line of input, excluding the new line
+        _currentInputLine = "";
+        output = output.right(output.length() - (newLineIdx + 1));
+    }
+
+    // No new line, keep constructing a full line
+    _currentInputLine.append(output);
+}
+
+/**
+ * @todo Extract size
+ * @todo Only look at files
+ */
+void ArchiveLister::sevenZipParser()
+{
+    QByteArray output = _process.readAllStandardOutput();
+    int newLineIdx;
+
+    //debug()<<"Got output:"<<QString(output);
+
+    while ((newLineIdx = output.indexOf('\n')) != -1)
+    {
+        // New line found
+        // Fill a full line of input, excluding the new line
+        _currentInputLine.append(output.left(newLineIdx));
+
+        // If path entry line
+        if (_currentInputLine.startsWith("Path = "))
+        {
+            // File name is remainder of the line
+            QString filename = _currentInputLine.right(_currentInputLine.length() - 7);
+
+            // Only add if an image file
+            if (FileClassification::isImageFile(filename))
+            {
+                emit entryFound(filename, 0, 0);
+            }
         }
 
         // Start a new line of input, excluding the new line

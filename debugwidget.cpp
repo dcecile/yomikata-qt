@@ -10,12 +10,6 @@ DebugWidget::DebugWidget(Book &book, QWidget *parent)
     // Create the scene
     _scene.setItemIndexMethod(QGraphicsScene::NoIndex);
 
-    // Create the pages
-    setup();
-
-    // Subscribe to changes
-    connect(&_book, SIGNAL(changed()), SLOT(setup()));
-
     // Create the view
     setScene(&_scene);
     setRenderHint(QPainter::Antialiasing);
@@ -34,6 +28,25 @@ DebugWidget::~DebugWidget()
 {
 }
 
+void DebugWidget::showEvent(QShowEvent *event)
+{
+    debug()<<"Shown";
+    // Create the pages
+    setup();
+
+    // Subscribe to changes
+    connect(&_book, SIGNAL(changed()), SLOT(setup()));
+}
+
+void DebugWidget::hideEvent(QHideEvent *event)
+{
+    // Unsubscribe to changes
+    disconnect(&_book, SIGNAL(changed()), this, SLOT(setup()));
+}
+
+/**
+ * @todo Optimize so as to not be a performance bug
+ */
 void DebugWidget::setup()
 {
     // Empty the scene

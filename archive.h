@@ -16,6 +16,7 @@ public:
         TarZ,
         Zip,
         Rar,
+        SevenZip,
         InvalidArchiveType
     };
 

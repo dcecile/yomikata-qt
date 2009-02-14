@@ -28,11 +28,12 @@ void Archive::reset(const QString &filename)
         {".tbz2", TarBz, "tar"},
         {".tar.Z", TarZ, "tar"}, // Using "compress"
         {".zip", Zip, "unzip"},
+        {".zip", SevenZip, "7z"},
         {".cbz", Zip, "unzip"},
         {".rar", Rar, "unrar"},
         {".cbr", Rar, "unrar"},
+        {".7z", SevenZip, "7z"},
         // Ace
-        // 7zip
         {"", InvalidArchiveType, ""},
     };
 

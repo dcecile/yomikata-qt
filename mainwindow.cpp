@@ -6,6 +6,7 @@
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QSplitter>
+#include <QTime>
 
 #include "debug.h"
 #include "steward.h"
@@ -108,6 +109,9 @@ void MainWindow::wheelEvent(QWheelEvent *event)
     }
     else
     {
+        QTime clock;
+        clock.start();
+
         if (event->delta() > 0)
         {
             // Page back
@@ -129,6 +133,8 @@ void MainWindow::wheelEvent(QWheelEvent *event)
             // Can't page
             event->ignore();
         }
+
+        debug()<<"Turning"<<clock.elapsed()<<"ms";
     }
 }
 

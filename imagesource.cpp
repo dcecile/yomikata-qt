@@ -65,7 +65,7 @@ qint64 ImageSource::readData(char *data, qint64 maxSize)
 {
     QMutexLocker locker(&_lock);
     int read = _proxy->read(data, maxSize);
-    //debug()<<"Reading"<<read<<QString("(%1 ms)").arg(_clock.elapsed());
+    //debug()<<"Reading"<<read<<QString("(%1 ms)").arg(_clock.elapsed())<<isOpen();
     return read;
 }
 

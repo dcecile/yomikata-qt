@@ -78,6 +78,8 @@ void Indexer::listingFinished()
     // Sort all the entries
     sort(_files.begin(), _files.end());
 
+    debug()<<"File"<<_files.front().name;
+
     // Notify the steward
     debug()<<"Listing finished:"<<_listingTime.elapsed()<<" ms"
             <<"--"<<_files.size()<<"entries";

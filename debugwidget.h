@@ -25,6 +25,8 @@ class DebugWidget : public QGraphicsView
     private:
         void resizeEvent(QResizeEvent *event);
         void mousePressEvent(QMouseEvent *event);
+        void showEvent(QShowEvent *event);
+        void hideEvent(QHideEvent *event);
 
     private slots:
         void setup();
