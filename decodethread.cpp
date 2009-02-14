@@ -232,8 +232,6 @@ void DecodeThread::setExtractCommand()
 
     // Pass in the file name
     _args<<_archive.filename();
-
-    debug()<<"Extract command set:"<<_command<<_args;
 }
 
 /**

@@ -21,19 +21,21 @@ void Archive::reset(const QString &filename)
     ARCHIVE_TYPES[] =
     {
         {".tar", Tar, "tar"},
-        {".tar.gz", TarGz, "tar"},
+        {".tar.gz", TarGz, "tar"}, // using gzip
         {".tgz", TarGz, "tar"},
-        {".tar.bz", TarBz, "tar"},
+        {".tar.bz", TarBz, "tar"}, // using bzip2
         {".tar.bz2", TarBz, "tar"},
         {".tbz2", TarBz, "tar"},
-        {".tar.Z", TarZ, "tar"}, // Using "compress"
+        {".tar.Z", TarZ, "tar"}, // Using compress
         {".zip", Zip, "unzip"},
         {".zip", SevenZip, "7z"},
         {".cbz", Zip, "unzip"},
         {".rar", Rar, "unrar"},
+        {".rar", SevenZip, "7z"}, //p7zip-rar
         {".cbr", Rar, "unrar"},
         {".7z", SevenZip, "7z"},
         // Ace
+        // Lzh
         {"", InvalidArchiveType, ""},
     };
 

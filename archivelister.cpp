@@ -300,20 +300,20 @@ void ArchiveLister::sevenZipParser()
 {
     QByteArray output = _process.readAllStandardOutput();
     int newLineIdx;
-
-    //debug()<<"Got output:"<<QString(output);
-
+    
     while ((newLineIdx = output.indexOf('\n')) != -1)
     {
         // New line found
         // Fill a full line of input, excluding the new line
         _currentInputLine.append(output.left(newLineIdx));
 
+        //debug()<<"Line"<<QString::fromUtf8(_currentInputLine);
+
         // If path entry line
         if (_currentInputLine.startsWith("Path = "))
         {
             // File name is remainder of the line
-            QString filename = _currentInputLine.right(_currentInputLine.length() - 7);
+            QString filename = QString::fromUtf8(_currentInputLine.right(_currentInputLine.length() - 7));
 
             // Only add if an image file
             if (FileClassification::isImageFile(filename))
