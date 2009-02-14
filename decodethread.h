@@ -11,6 +11,7 @@
 class Archive;
 class Indexer;
 class Strategist;
+class ImageSource;
 
 class DecodeThread : public QThread
 {
@@ -45,12 +46,14 @@ private:
     Strategist &_strategist;
 
     QMutex _requestLock;
+    QMutex _cancelLock;
     QWaitCondition _decodeRequest;
     volatile bool _aborted;
     volatile bool _reset;
     volatile int _requestPageNum;
 
     volatile int _pageNum;
+    ImageSource *_imageSource;
     QImage _image;
 
     volatile bool _cancelled;

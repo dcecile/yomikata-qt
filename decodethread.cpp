@@ -19,6 +19,7 @@ DecodeThread::DecodeThread(const Archive &archive, const Indexer &indexer, Strat
     _pageNum = -1;
     _requestPageNum = -1;
     _aborted = false;
+    _imageSource = NULL;
 }
 
 DecodeThread::~DecodeThread()
@@ -70,8 +71,16 @@ int DecodeThread::currentPageNum()
 
 void DecodeThread::cancel()
 {
+    QMutexLocker locker(&_cancelLock);
+
     // Set the cancelled flag
     _cancelled = true;
+
+    // Stop the image decode if it's running
+    if (_imageSource != NULL)
+    {
+        _imageSource->close();
+    }
 }
 
 void DecodeThread::run()
@@ -250,11 +259,30 @@ void DecodeThread::decode()
         imageReader.setScaledSize(targetSize);
     }
 
+    // Prepare to allow source cancels
+    {
+        QMutexLocker locker(&_cancelLock);
+        _imageSource = &source;
+    }
+
     // Decode the image
     QTime clock;
     clock.start();
     _image = imageReader.read();
-    //debug()<<imageReader.errorString();
+
+    // Disallow source cancels
+    {
+        QMutexLocker locker(&_cancelLock);
+        _imageSource = NULL;
+    }
+
+    // Stop if cancelled
+    if (_cancelled)
+    {
+        return;
+    }
+
+    // Assert the decode was okay
     Q_ASSERT(!_image.isNull());
     //debug()<<"Decode"<<clock.elapsed();
 

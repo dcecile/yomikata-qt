@@ -24,6 +24,7 @@ bool ImageSource::waitForReadyRead(int msecs)
 
 bool ImageSource::open(OpenMode mode)
 {
+    QMutexLocker locker(&_lock);
     debug()<<"Mode"<<mode;
     return false;
 }
@@ -48,7 +49,10 @@ bool ImageSource::canReadLine() const
 
 void ImageSource::close()
 {
-    debug()<<"close";
+    QMutexLocker locker(&_lock);
+    //debug()<<"close";
+    _proxy->close();
+    QIODevice::close();
 }
 
 bool ImageSource::atEnd() const
@@ -59,6 +63,7 @@ bool ImageSource::atEnd() const
 
 qint64 ImageSource::readData(char *data, qint64 maxSize)
 {
+    QMutexLocker locker(&_lock);
     int read = _proxy->read(data, maxSize);
     //debug()<<"Reading"<<read<<QString("(%1 ms)").arg(_clock.elapsed());
     return read;

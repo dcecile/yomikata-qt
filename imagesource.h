@@ -3,6 +3,7 @@
 
 #include <QIODevice>
 #include <QTime>
+#include <QMutex>
 
 class ImageSource : public QIODevice
 {
@@ -27,6 +28,7 @@ protected:
     qint64 writeData(const char *data, qint64 maxSize) { return 0; }
 
 private:
+    QMutex _lock;
     QIODevice *_proxy;
     QTime _clock;
 };
