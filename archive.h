@@ -2,6 +2,7 @@
 #define ARCHIVE_H
 
 #include <QObject>
+#include <QSettings>
 
 class Archive : public QObject
 {
@@ -10,19 +11,18 @@ class Archive : public QObject
 public:
     enum Type
     {
+        SevenZip = 0,
         Tar,
-        TarGz,
-        TarBz,
-        TarZ,
         Zip,
         Rar,
-        SevenZip,
         InvalidArchiveType
     };
 
 public:
     Archive(QObject *parent = NULL);
     ~Archive();
+
+    void testPrograms();
 
     void reset(const QString &_fileName);
 
@@ -31,9 +31,12 @@ public:
     const QString &programPath() const;
 
 private:
+    QSettings _settings;
+    bool _programExists[InvalidArchiveType];
+    QString _programPaths[InvalidArchiveType];
+    bool _sevenZipRarExists;
     QString _filename;
     Type _type;
-    QString _programPath;
 };
 
 #endif

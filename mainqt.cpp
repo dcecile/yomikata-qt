@@ -12,6 +12,15 @@ int application_main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setWindowIcon(QIcon(":/icon_16.png"));
 
+    // Set settings location
+    QCoreApplication::setOrganizationName("yomikata");
+    QCoreApplication::setApplicationName("yomikata");
+
+#ifdef Q_WS_WIN
+    // Don't use the Windows registry
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+#endif
+
     // Initial argument
     QString arg = "";
 

@@ -58,23 +58,11 @@ void ArchiveLister::start()
     QStringList args;
     switch (_archive.type())
     {
+        case Archive::SevenZip:
+            args<<"l"<<"-slt";
+            break;
         case Archive::Tar:
             args<<"-tvf";
-            _numFields = 5;
-            _sizeField = 2;
-            break;
-        case Archive::TarGz:
-            args<<"-ztvf";
-            _numFields = 5;
-            _sizeField = 2;
-            break;
-        case Archive::TarBz:
-            args<<"--bzip2"<<"-tvf";
-            _numFields = 5;
-            _sizeField = 2;
-            break;
-        case Archive::TarZ:
-            args<<"-Ztvf";
             _numFields = 5;
             _sizeField = 2;
             break;
@@ -85,9 +73,6 @@ void ArchiveLister::start()
             break;
         case Archive::Rar:
             args<<"vr";
-            break;
-        case Archive::SevenZip:
-            args<<"l"<<"-slt";
             break;
         default:
             Q_ASSERT(false);
@@ -103,15 +88,15 @@ void ArchiveLister::start()
                 this, SLOT(sevenZipParser()));
 
     // Set the parser
-    if (_archive.type() == Archive::Rar)
-    {
-        connect(&_process, SIGNAL(readyReadStandardOutput()),
-                 this, SLOT(rarParserText()));
-    }
-    else if (_archive.type() == Archive::SevenZip)
+    if (_archive.type() == Archive::SevenZip)
     {
         connect(&_process, SIGNAL(readyReadStandardOutput()),
                  this, SLOT(sevenZipParser()));
+    }
+    else if (_archive.type() == Archive::Rar)
+    {
+        connect(&_process, SIGNAL(readyReadStandardOutput()),
+                 this, SLOT(rarParserText()));
     }
     else
     {

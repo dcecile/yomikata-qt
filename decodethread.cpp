@@ -194,6 +194,9 @@ void DecodeThread::run()
     }
 }
 
+/**
+ * @todo Use correct path on Windows to find 7z
+ */
 void DecodeThread::setExtractCommand()
 {
     // Set the command
@@ -204,17 +207,11 @@ void DecodeThread::setExtractCommand()
 
     switch (_archive.type())
     {
+        case Archive::SevenZip:
+            _args<<"e"<<"-so";
+            break;
         case Archive::Tar:
             _args<<"-xOf";
-            break;
-        case Archive::TarGz:
-            _args<<"-zxOf";
-            break;
-        case Archive::TarBz:
-            _args<<"--bzip2"<<"-xOf";
-            break;
-        case Archive::TarZ:
-            _args<<"-ZxOf";
             break;
         case Archive::Zip:
             _args<<"-p";
@@ -222,9 +219,6 @@ void DecodeThread::setExtractCommand()
         case Archive::Rar:
             _args<<"p"<<"-ierr";
             // Note: With "-ierr", the header info is put into stderr (and ignored here)
-            break;
-        case Archive::SevenZip:
-            _args<<"e"<<"-so";
             break;
         default:
             Q_ASSERT(false);
