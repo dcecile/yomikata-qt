@@ -75,6 +75,17 @@ else()
     include(KDE4Defaults)
 endif()
 
+# Windows 7zip
+if(WIN32)
+	find_path(SEVENZIP_PATH "7z.exe")
+	
+	if(DEV_MODE)
+		add_definitions('-DWINDOWS_FIRST_PATH="${SEVENZIP_PATH}"')
+	else()
+		add_definitions('-DWINDOWS_FIRST_PATH="."')
+	endif()
+endif()
+
 # Source files
 if(QT_ONLY)
     set(yomikata_SRCS ${yomikata_SRCS} ${yomikata_qt_SRCS})

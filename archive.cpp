@@ -4,6 +4,10 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QTime>
+#include <QCoreApplication>
+#include <QRegExp>
+
+#include <stdlib.h>
 
 #include "debug.h"
 
@@ -12,6 +16,31 @@ Archive::Archive(QObject *parent)
 {
     // No type set
     _type = InvalidArchiveType;
+
+#ifdef Q_OS_WIN32
+    // If on Windows, set up the environment PATH variable
+    QString firstPath;
+
+    if (qstrcmp(WINDOWS_FIRST_PATH, ".") == 0)
+    {
+    	firstPath = QCoreApplication::applicationDirPath();
+    }
+    else
+    {
+    	firstPath = WINDOWS_FIRST_PATH;
+    }
+
+    QStringList env = QProcess::systemEnvironment();
+    QString oldPath;
+    int pathIndex;
+
+    if ((pathIndex = env.indexOf(QRegExp("^PATH=(.*)", Qt::CaseInsensitive))) != -1)
+    {
+    	oldPath = env[pathIndex].right(env[pathIndex].length() - 5);
+    }
+
+    putenv(("PATH=" + firstPath + ";" + oldPath).toLatin1());
+#endif
 
     // Initialize by the program settings
     _settings.beginGroup("archivers");
@@ -64,14 +93,16 @@ void Archive::testPrograms()
     // Wait for each process to finish
     for (int i = 0; i < InvalidArchiveType; i++)
     {
-        const int MAX_WAIT = 200;
+        const int MAX_WAIT = 500;
         bool waited;
 
         // Start without errors
         waited = programs[i].waitForStarted(MAX_WAIT);
+        debug()<<"Started"<<_programPaths[i]<<waited;
 
         // Finish without errors
         waited = waited && programs[i].waitForFinished(MAX_WAIT);
+        debug()<<"Finished"<<i<<waited;
 
         // If finished without errors, the program is OK to use
         _programExists[i] = waited;
@@ -137,7 +168,7 @@ void Archive::testPrograms()
         _sevenZipRarExists = QFileInfo(codecsFolder, "Rar29.so").exists();
     }
 #else
-    // On Windows, assume it exists
+    // On Windows, assume it 7zip RAR support exists
     _sevenZipRarExists = _programExists[SevenZip];
 #endif
 

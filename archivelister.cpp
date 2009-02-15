@@ -108,6 +108,52 @@ void ArchiveLister::start()
     _process.start(_archive.programPath(), args);
 }
 
+/**
+ * @todo Extract size
+ * @todo Only look at files
+ * @todo File bug with Qt about QProcess argument text codecs, it only EVER uses the system codec
+ */
+void ArchiveLister::sevenZipParser()
+{
+    QByteArray output = _process.readAllStandardOutput();
+    int newLineIdx;
+
+    while ((newLineIdx = output.indexOf('\n')) != -1)
+    {
+        // New line found
+        // Fill a full line of input, excluding the new line
+        _currentInputLine.append(output.left(newLineIdx));
+
+        if (_currentInputLine[_currentInputLine.length() - 1] == '\r')
+        {
+        	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
+        }
+
+        //debug()<<"Line"<<QString::fromLocal8Bit(_currentInputLine);
+
+        // If path entry line
+        if (_currentInputLine.startsWith("Path = "))
+        {
+            // File name is remainder of the line
+            QString filename = QTextCodec::codecForLocale()->toUnicode(_currentInputLine.right(_currentInputLine.length() - 7));
+
+            // Only add if an image file
+            if (FileClassification::isImageFile(filename))
+            {
+            	//filename = cleanZipFilename(filename);
+                emit entryFound(filename, 0, 0);
+            }
+        }
+
+        // Start a new line of input, excluding the new line
+        _currentInputLine = "";
+        output = output.right(output.length() - (newLineIdx + 1));
+    }
+
+    // No new line, keep constructing a full line
+    _currentInputLine.append(output);
+}
+
 void ArchiveLister::defaultParser()
 {
     QByteArray output = _process.readAllStandardOutput();
@@ -123,6 +169,11 @@ void ArchiveLister::defaultParser()
         // New line found
         // Fill a full line of input, excluding the new line
         _currentInputLine.append(output.left(newLineIdx));
+
+        if (_currentInputLine[_currentInputLine.length() - 1] == '\r')
+        {
+        	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
+        }
 
         QString fullLine = QTextCodec::codecForName("utf-8")->toUnicode(_currentInputLine);
         QStringList data = fullLine.split(" ");
@@ -215,6 +266,11 @@ void ArchiveLister::rarParserText()
         _currentInputLine.append(output.left(newLineIdx));
         //debug()<<"Got full line of output: "<<QString(_currentInputLine);
 
+        if (_currentInputLine[_currentInputLine.length() - 1] == '\r')
+        {
+        	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
+        }
+
         if (!_listingBodyReached)
         {
             if (_currentInputLine.length() > 0 && _currentInputLine.count('-') == _currentInputLine.length())
@@ -266,45 +322,6 @@ void ArchiveLister::rarParserText()
 
             // Alternate to a non-filename line
             _filenameLine = !_filenameLine;
-        }
-
-        // Start a new line of input, excluding the new line
-        _currentInputLine = "";
-        output = output.right(output.length() - (newLineIdx + 1));
-    }
-
-    // No new line, keep constructing a full line
-    _currentInputLine.append(output);
-}
-
-/**
- * @todo Extract size
- * @todo Only look at files
- */
-void ArchiveLister::sevenZipParser()
-{
-    QByteArray output = _process.readAllStandardOutput();
-    int newLineIdx;
-    
-    while ((newLineIdx = output.indexOf('\n')) != -1)
-    {
-        // New line found
-        // Fill a full line of input, excluding the new line
-        _currentInputLine.append(output.left(newLineIdx));
-
-        //debug()<<"Line"<<QString::fromUtf8(_currentInputLine);
-
-        // If path entry line
-        if (_currentInputLine.startsWith("Path = "))
-        {
-            // File name is remainder of the line
-            QString filename = QString::fromUtf8(_currentInputLine.right(_currentInputLine.length() - 7));
-
-            // Only add if an image file
-            if (FileClassification::isImageFile(filename))
-            {
-                emit entryFound(filename, 0, 0);
-            }
         }
 
         // Start a new line of input, excluding the new line
