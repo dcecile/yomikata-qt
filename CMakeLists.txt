@@ -59,6 +59,9 @@ cmake_minimum_required(VERSION 2.6)
 # Options
 include(cmake/Options.cmake)
 
+# Paths
+include(cmake/Paths.cmake)
+
 # Dependencies
 if(QT_ONLY)
     # Qt-only dependency
@@ -118,7 +121,9 @@ if(QT_ONLY)
     qt4_add_resources(yomikata_SRCS yomikata.qrc)
     add_executable(yomikata ${yomikata_SRCS})
     target_link_libraries(yomikata ${QT_LIBRARIES} ${COVERAGE_LIBRARY})
-    set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
+	if(CODE_COVERAGE)
+	    set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
+	endif()
 else()
     # KDE build steps
     kde4_add_kcfg_files(yomikata_SRCS settings.kcfgc)
@@ -133,6 +138,32 @@ include(cmake/Doxygen.cmake)
 
 if(QT_ONLY)
     # Qt-only install
+	install(TARGETS yomikata DESTINATION ${BIN_INSTALL_DIR})
+    install(FILES ${SEVENZIP_PATH}/7z.exe  
+        DESTINATION ${BIN_INSTALL_DIR})
+        set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A liberated and enjoyable comics reading experience.")
+	
+	set(CPACK_PACKAGE_VENDOR "Yomikata")
+	set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.TXT")
+	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING.TXT")
+	set(CPACK_PACKAGE_VERSION_MAJOR "0")
+	set(CPACK_PACKAGE_VERSION_MINOR "0")
+	set(CPACK_PACKAGE_VERSION_PATCH "1")
+	set(CPACK_PACKAGE_INSTALL_DIRECTORY "Yomikata")
+	set(CPACK_PACKAGE_EXECUTABLES "yomikata" "Yomikata")
+	
+	if(WIN32 AND NOT UNIX)
+		set(CPACK_NSIS_MODIFY_PATH OFF)
+	    set(CPACK_PACKAGE_FILE_NAME "yomikata-setup")
+	    #set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/data/icon\\\\icon.ico")
+	    #set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/data/icon\\\\uninstall.ico")
+	    #set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/data/icon\\\\install_banner.bmp")
+	    #set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\yomikata.exe")
+	    set(CPACK_NSIS_DISPLAY_NAME "Yomikata")
+	endif()
+	
+	include(cmake/Install.cmake)
+        
 else()
     # KDE install
     install(TARGETS yomikata DESTINATION ${BIN_INSTALL_DIR})
