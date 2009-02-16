@@ -135,12 +135,11 @@ void ArchiveLister::sevenZipParser()
         if (_currentInputLine.startsWith("Path = "))
         {
             // File name is remainder of the line
-            QString filename = QTextCodec::codecForLocale()->toUnicode(_currentInputLine.right(_currentInputLine.length() - 7));
+        	QByteArray filename = _currentInputLine.right(_currentInputLine.length() - 7);
 
             // Only add if an image file
             if (FileClassification::isImageFile(filename))
             {
-            	//filename = cleanZipFilename(filename);
                 emit entryFound(filename, 0, 0);
             }
         }
@@ -175,7 +174,7 @@ void ArchiveLister::defaultParser()
         	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
         }
 
-        QString fullLine = QTextCodec::codecForName("utf-8")->toUnicode(_currentInputLine);
+        QString fullLine = QTextCodec::codecForLocale()->toUnicode(_currentInputLine);
         QStringList data = fullLine.split(" ");
 
         // Skip fields before size field
@@ -217,7 +216,7 @@ void ArchiveLister::defaultParser()
             // Put the name back together and trim whitespace
             QString filename = data.join(" ").trimmed();
 
-            if (FileClassification::isImageFile(filename))
+            if (FileClassification::isImageFile(filename.toLocal8Bit()))
             {
                 // This is an image file
 
@@ -229,7 +228,7 @@ void ArchiveLister::defaultParser()
                     filename = cleanZipFilename(filename);
                 }
 
-                emit entryFound(filename, size, 0);
+                emit entryFound(filename.toLocal8Bit(), size, 0);
             }
         }
 
@@ -296,14 +295,14 @@ void ArchiveLister::rarParserText()
 
                 Q_ASSERT(_currentInputLine[0] == ' ');
 
-                _rarFileName = QTextCodec::codecForName("utf-8")->toUnicode(_currentInputLine).trimmed();
+                _rarFileName = QTextCodec::codecForLocale()->toUnicode(_currentInputLine).trimmed();
                 Q_ASSERT(_rarFileName.length() != 0);
             }
             else
             {
                 Q_ASSERT(_currentInputLine[0] == ' ');
 
-                QString fullLine = QTextCodec::codecForName("utf-8")->toUnicode(_currentInputLine);
+                QString fullLine = QTextCodec::codecForLocale()->toUnicode(_currentInputLine);
                 QStringList data = fullLine.split(" ", QString::SkipEmptyParts);
                 Q_ASSERT(data.size() == 9);
 
@@ -311,12 +310,12 @@ void ArchiveLister::rarParserText()
                 // Note: all directories will have size 0
                 // And check that the file is an image
                 QString size = data[1];
-                if (size != "0" && FileClassification::isImageFile(_rarFileName))
+                if (size != "0" && FileClassification::isImageFile(_rarFileName.toLocal8Bit()))
                 {
                     int parsedSize = size.toInt(&parsed);
                     Q_ASSERT(parsed);
 
-                    emit entryFound(_rarFileName, parsedSize, 0);
+                    emit entryFound(_rarFileName.toLocal8Bit(), parsedSize, 0);
                 }
             }
 

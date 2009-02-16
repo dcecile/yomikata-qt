@@ -60,6 +60,7 @@ private:
 
     QString _command;
     QStringList _args;
+    QString _temporaryFileName;
 };
 
 #endif

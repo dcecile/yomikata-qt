@@ -28,7 +28,7 @@ public:
     void start();
 
 signals:
-    void entryFound(const QString &filename, int compressedSize, int uncompressedSize);
+    void entryFound(const QByteArray &filename, int compressedSize, int uncompressedSize);
     void finished();
 
 private slots:

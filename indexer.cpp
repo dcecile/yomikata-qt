@@ -32,8 +32,8 @@ void Indexer::reset()
     _archiveLister = new ArchiveLister(_archive, this);
 
     // Connect to it
-    connect(_archiveLister, SIGNAL(entryFound(const QString &, int, int)),
-            SLOT(entryFound(const QString &, int, int)));
+    connect(_archiveLister, SIGNAL(entryFound(const QByteArray &, int, int)),
+            SLOT(entryFound(const QByteArray &, int, int)));
     connect(_archiveLister, SIGNAL(finished()), SLOT(listingFinished()));
 
     // Start it
@@ -48,13 +48,13 @@ int Indexer::numPages() const
     return _files.size();
 }
 
-QString Indexer::pageName(int indexer) const
+QByteArray Indexer::pageName(int indexer) const
 {
     Q_ASSERT(indexer >= 0 && indexer < (int) _files.size());
     return _files[indexer].name;
 }
 
-void Indexer::entryFound(const QString &filename, int compressedSize, int uncompressedSize)
+void Indexer::entryFound(const QByteArray &filename, int compressedSize, int uncompressedSize)
 {
     // Add the entry to the list
     FileInfo temp;
@@ -66,7 +66,7 @@ void Indexer::entryFound(const QString &filename, int compressedSize, int uncomp
 
 bool Indexer::FileInfo::operator < (const Indexer::FileInfo &other) const
 {
-    return QString::localeAwareCompare(name, other.name) < 0;
+    return QString::localeAwareCompare(QString::fromLocal8Bit(name), QString::fromLocal8Bit(other.name)) < 0;
 }
 
 void Indexer::listingFinished()

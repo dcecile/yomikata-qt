@@ -26,19 +26,19 @@ public:
     void reset();
 
     int numPages() const;
-    QString pageName(int indexer) const;
+    QByteArray pageName(int indexer) const;
 
 signals:
     void built();
 
 private slots:
-    void entryFound(const QString &filename, int compressedSize, int uncompressedSize);
+    void entryFound(const QByteArray &filename, int compressedSize, int uncompressedSize);
     void listingFinished();
 
 private:
     struct FileInfo
     {
-        QString name;
+        QByteArray name;
         int compressedSize;
         int uncompressedSize;
 

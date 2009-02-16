@@ -10,14 +10,20 @@ const char *FileClassification::IMAGE_TYPES[] = {
     ".gif",
     ".bmp",
     ".tiff",
+    ".JPG",
+    ".JPEG",
+    ".PNG",
+    ".GIF",
+    ".BMP",
+    ".TIFF",
     ""
 };
 
-bool FileClassification::isImageFile(const QString& filename)
+bool FileClassification::isImageFile(const QByteArray& filename)
 {
     for (int i = 0; *IMAGE_TYPES[i] != '\0'; i++)
     {
-        if (filename.endsWith(IMAGE_TYPES[i], Qt::CaseInsensitive))
+        if (filename.endsWith(IMAGE_TYPES[i]))
         {
             return true;
         }

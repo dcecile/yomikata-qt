@@ -3,6 +3,8 @@
 #include <QTime>
 #include <QProcess>
 #include <QImageReader>
+#include <QTextCodec>
+#include <QTemporaryFile>
 
 #include "debug.h"
 #include "archive.h"
@@ -18,6 +20,11 @@ DecodeThread::DecodeThread(const Archive &archive, const Indexer &indexer, Strat
     _requestPageNum = -1;
     _aborted = false;
     _imageSource = NULL;
+
+    QTemporaryFile file;
+    file.setAutoRemove(false);
+    file.open();
+    _temporaryFileName = file.fileName();
 }
 
 DecodeThread::~DecodeThread()
@@ -33,6 +40,10 @@ DecodeThread::~DecodeThread()
 
     // Wait for the thread to finish
     wait();
+
+    // Remove the temporary file
+    QFile(_temporaryFileName).remove();
+
     debug()<<"~DecodeThread()";
 }
 
@@ -208,7 +219,7 @@ void DecodeThread::setExtractCommand()
     switch (_archive.type())
     {
         case Archive::SevenZip:
-            _args<<"e"<<"-so";
+            _args<<"e"<<"-so"<<"-scsDOS";
             break;
         case Archive::Tar:
             _args<<"-xOf";
@@ -239,23 +250,32 @@ void DecodeThread::decode()
     time.start();
 
     // Choose a format for the filename argument
-    QString nameArgument = _indexer.pageName(_pageNum);
+    QString nameArgument;
 
     if (_archive.type() == Archive::SevenZip)
     {
-        nameArgument.prepend("-i!");
+    	QFile file(_temporaryFileName);
+    	file.open(QIODevice::WriteOnly);
+        file.write(_indexer.pageName(_pageNum));
+        file.write("\r\n");
+        file.close();
+
+        nameArgument = "-i@" + _temporaryFileName;
+    }
+    else
+    {
+    	nameArgument = QString::fromLocal8Bit(_indexer.pageName(_pageNum));
     }
 
     // Start the extracter
     //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
     QProcess extracter;
-    extracter.start(_command, _args + QStringList(nameArgument));
+    QStringList args = _args + QStringList(nameArgument);
+    extracter.start(_command, args);
 
-    // Wait for the extracter to finish
+    // Wait for the extracter to finish, until done or cancelled
     // Note: QImageReader won't decode the whole image unless the whole
     //  image is ready to be read
-
-    // Keep waiting until done or cancelled
     bool waited;
 
     do
@@ -266,6 +286,8 @@ void DecodeThread::decode()
         //debug()<<"Waited"<<clock.elapsed();
     }
     while (!_cancelled && !waited);
+
+    //debug()<<extracter.readAllStandardError();
 
     // Stop the extracter if cancelled
     if (_cancelled)

@@ -6,7 +6,7 @@
 class FileClassification
 {
 public:
-    static bool isImageFile(const QString& filename);
+    static bool isImageFile(const QByteArray& filename);
     static QString getFileDialogWildcardString();
 
 private:
