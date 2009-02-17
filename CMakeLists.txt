@@ -115,6 +115,28 @@ if(CODE_COVERAGE)
     include(cmake/CodeCoverage.cmake)
 endif()
 
+# Link flags
+if(WIN32 AND NOT UNIX)
+    # Don't open a console in windows
+    message("test")
+    set(LINK_FLAGS "${LINK_FLAGS} -mwindows")
+endif()
+
+# EXE icon (modeled off http://svn.berlios.de/svnroot/repos/sim-im/trunk/sim/sim.rc)
+if(WIN32)
+  if(MINGW)
+    # resource compilation for mingw
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o
+                       DEPENDS icon.rc
+                       COMMAND windres.exe -I${CMAKE_CURRENT_SOURCE_DIR}
+                                           -i${CMAKE_CURRENT_SOURCE_DIR}/icon.rc
+                                           -o ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o)
+    set(yomikata_SRCS ${yomikata_SRCS} ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o)
+  else()
+    set(yomikata_SRCS ${yomikata_SRCS} icon.rc)
+  endif()
+endif()
+
 if(QT_ONLY)
     # Qt-only build steps
     qt4_automoc(${yomikata_SRCS})
@@ -132,6 +154,10 @@ else()
         ${COVERAGE_LIBRARY})
     set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
 endif()
+
+# Set flags
+#set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${CXX_FLAGS})
+set_target_properties(yomikata PROPERTIES LINK_FLAGS "${CXX_FLAGS} ${LINK_FLAGS}")
 
 # Doxygen
 include(cmake/Doxygen.cmake)
@@ -155,10 +181,10 @@ if(QT_ONLY)
 	if(WIN32 AND NOT UNIX)
 		set(CPACK_NSIS_MODIFY_PATH OFF)
 	    set(CPACK_PACKAGE_FILE_NAME "yomikata-setup")
-	    #set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/data/icon\\\\icon.ico")
-	    #set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/data/icon\\\\uninstall.ico")
+	    set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/icon\\\\icon.ico")
+	    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/icon\\\\uninstall.ico")
 	    #set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/data/icon\\\\install_banner.bmp")
-	    #set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\yomikata.exe")
+	    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\yomikata.exe")
 	    set(CPACK_NSIS_DISPLAY_NAME "Yomikata")
 	endif()
 	

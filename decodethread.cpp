@@ -257,7 +257,7 @@ void DecodeThread::decode()
     	QFile file(_temporaryFileName);
     	file.open(QIODevice::WriteOnly);
         file.write(_indexer.pageName(_pageNum));
-        file.write("\r\n");
+        file.write("\n");
         file.close();
 
         nameArgument = "-i@" + _temporaryFileName;

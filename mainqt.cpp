@@ -16,7 +16,11 @@ int application_main(int argc, char *argv[])
 #endif
 {
     QApplication app(argc, argv);
-    app.setWindowIcon(QIcon(":/icon_16.png"));
+
+#ifndef Q_OS_WIN32
+    // Icon not needed on windows
+    app.setWindowIcon(QIcon(":/icon16.png"));
+#endif
 
     // Set settings location
     QCoreApplication::setOrganizationName("yomikata");
