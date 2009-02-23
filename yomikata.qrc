@@ -1,5 +1,5 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
-    <file alias="icon16.png">icon/icon16.png</file>
+    <file alias="icon.ico">icon/icon.ico</file>
 </qresource>
 </RCC>

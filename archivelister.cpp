@@ -124,12 +124,18 @@ void ArchiveLister::sevenZipParser()
         // Fill a full line of input, excluding the new line
         _currentInputLine.append(output.left(newLineIdx));
 
-        if (_currentInputLine[_currentInputLine.length() - 1] == '\r')
-        {
-        	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
-        }
+        // Trim the full line
+        _currentInputLine = _currentInputLine.trimmed();
 
-        //debug()<<"Line"<<QString::fromLocal8Bit(_currentInputLine);
+        // Skip blank lines
+        if (_currentInputLine.length() == 0)
+        {
+            // Skip this input
+            output = output.right(output.length() - (newLineIdx + 1));
+
+            // Don't process this line
+            continue;
+        }
 
         // If path entry line
         if (_currentInputLine.startsWith("Path = "))
@@ -169,9 +175,17 @@ void ArchiveLister::defaultParser()
         // Fill a full line of input, excluding the new line
         _currentInputLine.append(output.left(newLineIdx));
 
-        if (_currentInputLine[_currentInputLine.length() - 1] == '\r')
+        // Trim the full line
+        _currentInputLine = _currentInputLine.trimmed();
+
+        // Skip blank lines
+        if (_currentInputLine.length() == 0)
         {
-        	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
+            // Skip this input
+            output = output.right(output.length() - (newLineIdx + 1));
+
+            // Don't process this line
+            continue;
         }
 
         QString fullLine = QTextCodec::codecForLocale()->toUnicode(_currentInputLine);
@@ -265,14 +279,24 @@ void ArchiveLister::rarParserText()
         _currentInputLine.append(output.left(newLineIdx));
         //debug()<<"Got full line of output: "<<QString(_currentInputLine);
 
-        if (_currentInputLine[_currentInputLine.length() - 1] == '\r')
+        // Trim the full line
+        _currentInputLine = _currentInputLine.trimmed();
+
+        debug()<<"Length"<<_currentInputLine.length();
+
+        // Skip blank lines
+        if (_currentInputLine.length() == 0)
         {
-        	_currentInputLine = _currentInputLine.left(_currentInputLine.length() - 1);
+            // Skip this input
+            output = output.right(output.length() - (newLineIdx + 1));
+
+            // Don't process this line
+            continue;
         }
 
         if (!_listingBodyReached)
         {
-            if (_currentInputLine.length() > 0 && _currentInputLine.count('-') == _currentInputLine.length())
+            if (_currentInputLine.count('-') == _currentInputLine.length())
             {
                 // We've reached the start of the listing
                 _listingBodyReached = true;
@@ -293,15 +317,11 @@ void ArchiveLister::rarParserText()
                     return;
                 }
 
-                Q_ASSERT(_currentInputLine[0] == ' ');
-
-                _rarFileName = QTextCodec::codecForLocale()->toUnicode(_currentInputLine).trimmed();
+                _rarFileName = QTextCodec::codecForLocale()->toUnicode(_currentInputLine);
                 Q_ASSERT(_rarFileName.length() != 0);
             }
             else
             {
-                Q_ASSERT(_currentInputLine[0] == ' ');
-
                 QString fullLine = QTextCodec::codecForLocale()->toUnicode(_currentInputLine);
                 QStringList data = fullLine.split(" ", QString::SkipEmptyParts);
                 Q_ASSERT(data.size() == 9);
@@ -310,6 +330,7 @@ void ArchiveLister::rarParserText()
                 // Note: all directories will have size 0
                 // And check that the file is an image
                 QString size = data[1];
+
                 if (size != "0" && FileClassification::isImageFile(_rarFileName.toLocal8Bit()))
                 {
                     int parsedSize = size.toInt(&parsed);

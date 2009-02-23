@@ -219,7 +219,11 @@ void DecodeThread::setExtractCommand()
     switch (_archive.type())
     {
         case Archive::SevenZip:
-            _args<<"e"<<"-so"<<"-scsDOS";
+            _args<<"e"<<"-so";
+#ifdef Q_OS_WIN32
+            // Specify the list file encoding on Windows
+            _args<<"-scsDOS";
+#endif
             break;
         case Archive::Tar:
             _args<<"-xOf";
@@ -268,7 +272,7 @@ void DecodeThread::decode()
     }
 
     // Start the extracter
-    //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
+    debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
     QProcess extracter;
     QStringList args = _args + QStringList(nameArgument);
     extracter.start(_command, args);

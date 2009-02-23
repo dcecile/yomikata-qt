@@ -19,7 +19,7 @@ int application_main(int argc, char *argv[])
 
 #ifndef Q_OS_WIN32
     // Icon not needed on windows
-    app.setWindowIcon(QIcon(":/icon16.png"));
+    app.setWindowIcon(QIcon(":/icon.ico"));
 #endif
 
     // Set settings location
