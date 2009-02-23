@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "steward.h"
+#include "viewwidget.h"
 
 MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     : MainWindowAncestor(parent)
@@ -20,10 +21,9 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     QSplitter *splitter = new QSplitter(Qt::Vertical, this);
     setCentralWidget(splitter);
 
-    // Add the projector
-    QWidget *projector = _steward->projector();
-    projector->setParent(this);
-    splitter->addWidget(projector);
+    // Add the view widget
+    QWidget *viewWidget = new ViewWidget(*_steward, this);
+    splitter->addWidget(viewWidget);
 
     // Add the debug widget
     _debugWidget = _steward->debugWidget();

@@ -1,7 +1,7 @@
 #ifndef PROJECTOR_H
 #define PROJECTOR_H
 
-#include <QWidget>
+#include <QObject>
 
 #include <QTimer>
 
@@ -11,12 +11,12 @@
 
 struct DisplayMetrics;
 
-class Projector : public QWidget
+class Projector : public QObject
 {
     Q_OBJECT
 
 public:
-    Projector(QWidget *parent = NULL);
+    Projector(QObject *parent = NULL);
     ~Projector();
 
     void setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
@@ -24,15 +24,16 @@ public:
 
     void retrieveDisplay(QRect *rect0, QRect *rect1);
 
-    QSize sizeHint() const;
-    int heightForWidth(int width) const;
+    void setViewSize(const QSize &size);
+    QSize fullSize() const;
+
+    void paint(QPainter *painter, const QRect &updateRect);
+
+    void mouseMoved(const QPointF &pos);
 
 signals:
-    void resized(const QSize &fullSize, const QSize &viewSize);
-
-private:
-    void resizeEvent(QResizeEvent *event);
-    void paintEvent(QPaintEvent *event);
+    void update();
+    void repaint();
 
 private slots:
     void refresh();
@@ -41,6 +42,8 @@ private slots:
 private:
     static const double MAGNIFICATION;
     static const double FRAMES_PER_SECOND;
+    QSize _viewSize;
+    QSize _fullSize;
     bool _isShown[2];
     bool _isLoading[2];
     QRect _placement[2];

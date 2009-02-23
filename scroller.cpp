@@ -12,20 +12,9 @@
 using std::min;
 using std::max;
 
-Scroller::Scroller(QWidget *parent)
+Scroller::Scroller(QObject *parent)
     : QObject(parent)
 {
-    _parent = parent;
-
-    // Subscribe to mouse movement
-    _parent->setMouseTracking(true);
-
-    // Hide the cursor
-    _parent->setCursor(Qt::BlankCursor);
-
-    // Become an event filter
-    _parent->installEventFilter(this);
-
     // Start stopped
     _extent = QSizeF(0.0, 0.0);
     _velocity = QPointF(0.0, 0.0);
@@ -65,21 +54,7 @@ QPoint Scroller::position()
     return _scrollPos.toPoint();
 }
 
-bool Scroller::eventFilter(QObject *watched, QEvent *event)
-{
-    if (watched == _parent)
-    {
-        if (event->type() == QEvent::MouseMove)
-        {
-            // Found a mouse event of the parent
-            QMouseEvent *mouseEvent = (QMouseEvent *) event;
-            moved(mouseEvent->posF());
-        }
-    }
-    return false;
-}
-
-void Scroller::moved(const QPointF &pos)
+void Scroller::mouseMoved(const QPointF &pos)
 {
     // Finish with the last force parameters
     timeStep();

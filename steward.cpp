@@ -27,7 +27,8 @@ Steward::Steward(QObject *parent)
     connect(&_indexer, SIGNAL(built()), SLOT(indexerBuilt()));
     connect(&_strategist, SIGNAL(recievedFullPageSize(int)), SLOT(recievedFullPageSize(int)));
     connect(&_artificer, SIGNAL(pageDecoded(int, QPixmap)), SLOT(decodeDone(int, QPixmap)));
-    connect(&_projector, SIGNAL(resized(const QSize&, const QSize&)), SLOT(viewportResized(const QSize&, const QSize&)));
+    connect(&_projector, SIGNAL(update()), SIGNAL(viewUpdate()));
+    connect(&_projector, SIGNAL(repaint()), SIGNAL(viewRepaint()));
 
     _buildingIndexer = false;
 }
@@ -36,11 +37,6 @@ Steward::~Steward()
 {
     // Stop the threads first
     delete &_artificer;
-}
-
-QWidget *Steward::projector()
-{
-    return &_projector;
 }
 
 QWidget *Steward::debugWidget()
@@ -177,12 +173,15 @@ void Steward::decodeDone(int index, QPixmap page)
     }
 }
 
-void Steward::viewportResized(const QSize &fullSize, const QSize &viewSize)
+void Steward::setViewSize(const QSize &size)
 {
-    debug()<<"Resized"<<fullSize;
+    debug()<<"Resized"<<size;
+
+    // Notify the projector
+    _projector.setViewSize(size);
 
     // Notify the strategist
-    _strategist.setViewport(fullSize, viewSize);
+    _strategist.setViewport(_projector.fullSize(), size);
 
     // Check if the book is being opened
     if (_buildingIndexer)
@@ -196,6 +195,18 @@ void Steward::viewportResized(const QSize &fullSize, const QSize &viewSize)
         // Reload the pages
         loadPages();
     }
+}
+
+void Steward::paintView(QPainter *painter, const QRect &updateRect)
+{
+    // Have the projector paint
+    _projector.paint(painter, updateRect);
+}
+
+void Steward::mouseMoved(const QPointF &pos)
+{
+    // Tell the projector about the mouse movement
+    _projector.mouseMoved(pos);
 }
 
 /**

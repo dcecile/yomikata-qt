@@ -26,20 +26,27 @@ public:
     Steward(QObject *parent = NULL);
     ~Steward();
 
-    QWidget *projector();
     QWidget *debugWidget();
 
     void reset(const QString &filename);
+
+    void setViewSize(const QSize &size);
+    void paintView(QPainter *painter, const QRect &updateRect);
+
+    void mouseMoved(const QPointF &pos);
 
 public slots:
     void next();
     void previous();
     void shiftNext();
 
+signals:
+    void viewUpdate();
+    void viewRepaint();
+
 private slots:
     void indexerBuilt();
     void decodeDone(int index, QPixmap page);
-    void viewportResized(const QSize &fullSize, const QSize &viewSize);
     void recievedFullPageSize(int index);
     void dualCausedPageChange();
 

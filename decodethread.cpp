@@ -272,7 +272,7 @@ void DecodeThread::decode()
     }
 
     // Start the extracter
-    debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
+    //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
     QProcess extracter;
     QStringList args = _args + QStringList(nameArgument);
     extracter.start(_command, args);

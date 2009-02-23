@@ -4,6 +4,8 @@ project(yomikata)
 set(yomikata_SRCS
     mainwindow.cpp
 
+    viewwidget.cpp
+
     steward.cpp
     artificer.cpp
     strategist.cpp

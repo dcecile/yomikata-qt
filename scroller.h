@@ -14,24 +14,23 @@ class Scroller: public QObject
     Q_OBJECT
 
 public:
-    Scroller(QWidget *parent);
+    Scroller(QObject *parent);
     ~Scroller();
 
     void reset(const QSize &extent);
 
     QPoint position();
 
+    void mouseMoved(const QPointF &pos);
+
 signals:
     void enableRefresh(bool enable);
 
 private:
-    bool eventFilter(QObject *watched, QEvent *event);
-    void moved(const QPointF &pos);
     void timeStep();
     void enforceBounds();
 
 private:
-    QWidget *_parent;
     QPointF _lastMousePos;
 
     QSizeF _extent;

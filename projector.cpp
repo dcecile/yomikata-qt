@@ -1,7 +1,7 @@
 #include "projector.h"
 
+#include <QPalette>
 #include <QPainter>
-#include <QPaintEvent>
 #include <QApplication>
 
 #include "debug.h"
@@ -10,8 +10,8 @@
 const double Projector::MAGNIFICATION = 2.0;
 const double Projector::FRAMES_PER_SECOND = 60.0;
 
-Projector::Projector(QWidget *parent)
-    : QWidget(parent), _scroller(this), _loadingSprite(palette().color(QPalette::WindowText), palette().color(QPalette::Base))
+Projector::Projector(QObject *parent)
+    : QObject(parent), _scroller(this), _loadingSprite(QPalette().color(QPalette::WindowText), QPalette().color(QPalette::Base))
 {
     // Show nothing
     _isShown[0] = false;
@@ -29,16 +29,6 @@ Projector::Projector(QWidget *parent)
 
 Projector::~Projector()
 {
-}
-
-QSize Projector::sizeHint() const
-{
-    return QSize(200, 100);
-}
-
-int Projector::heightForWidth(int width) const
-{
-    return width * 3 / 4;
 }
 
 void Projector::setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1)
@@ -90,7 +80,7 @@ void Projector::updateDisplay(const DisplayMetrics &displayMetrics, const QPixma
     }
 
     // Schedule a repaint
-    update();
+    emit update();
 }
 
 void Projector::retrieveDisplay(QRect *rect0, QRect *rect1)
@@ -114,21 +104,19 @@ void Projector::retrieveDisplay(QRect *rect0, QRect *rect1)
     }
 }
 
-void Projector::resizeEvent(QResizeEvent *event)
+void Projector::setViewSize(const QSize &size)
 {
-    // Expand the size
-    QSize newSize = (QSizeF(event->size()) * MAGNIFICATION).toSize();
-
-    // Tell the steward
-    emit resized(newSize, event->size());
+    _viewSize = size;
+    _fullSize = (QSizeF(_viewSize) * MAGNIFICATION).toSize();
 }
 
-void Projector::paintEvent(QPaintEvent *event)
+QSize Projector::fullSize() const
 {
-    // Set up the painter
-    QPainter painter(this);
-    QRect updateRect = event->rect();
+    return _fullSize;
+}
 
+void Projector::paint(QPainter *painter, const QRect &updateRect)
+{
     // Calculate the scrolled rects
     QPoint scrolling = _scroller.position();
     QRect scrolled[2];
@@ -142,7 +130,7 @@ void Projector::paintEvent(QPaintEvent *event)
     {
         // Both loading
         _loadingSprite.setGeometry(scrolled[0] | scrolled[1]);
-        _loadingSprite.paint(&painter, updateRect);
+        _loadingSprite.paint(painter, updateRect);
     }
     else
     {
@@ -152,13 +140,13 @@ void Projector::paintEvent(QPaintEvent *event)
             {
                 // First loading
                 _loadingSprite.setGeometry(scrolled[0]);
-                _loadingSprite.paint(&painter, updateRect);
+                _loadingSprite.paint(painter, updateRect);
             }
             else
             {
                 // First shown
                 _pageSprite0.setTopLeft(scrolled[0].topLeft());
-                _pageSprite0.paint(&painter, updateRect);
+                _pageSprite0.paint(painter, updateRect);
             }
         }
 
@@ -168,13 +156,13 @@ void Projector::paintEvent(QPaintEvent *event)
             {
                 // Second loading
                 _loadingSprite.setGeometry(scrolled[1]);
-                _loadingSprite.paint(&painter, updateRect);
+                _loadingSprite.paint(painter, updateRect);
             }
             else
             {
                 // Second shown
                 _pageSprite1.setTopLeft(scrolled[1].topLeft());
-                _pageSprite1.paint(&painter, updateRect);
+                _pageSprite1.paint(painter, updateRect);
             }
         }
     }
@@ -193,7 +181,7 @@ void Projector::refresh()
     QApplication::processEvents();
 
     // Repaint immediately
-    repaint();
+    emit repaint();
 }
 
 void Projector::enableRefresh(bool enable)
@@ -203,8 +191,13 @@ void Projector::enableRefresh(bool enable)
     // If on and not running, update immediately (repeat after)
     if (_refreshRequested && !_refreshTimer.isActive())
     {
-        update();
+        emit update();
     }
+}
+
+void Projector::mouseMoved(const QPointF &pos)
+{
+    _scroller.mouseMoved(pos);
 }
 
 #include "projector.moc"
