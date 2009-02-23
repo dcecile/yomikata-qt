@@ -23,6 +23,7 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
 
     QVBoxLayout *layout = new QVBoxLayout(mainWidget);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
 
     // Add the toolbar
     ToolbarWidget *toolbar = new ToolbarWidget(this);
@@ -30,17 +31,13 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     layout->addWidget(toolbar);
 
     // Add the view widget
-    ViewWidget *view = new ViewWidget(*_steward, this);
+    ViewWidget *view = new ViewWidget(*_steward, toolbar, this);
     layout->addWidget(view);
 
     // Enable things
     _zoomToggleEnabled = true;
     _zoomInEnabled = true;
     _zoomOutEnabled = true;
-
-    // Connect view
-    connect(view, SIGNAL(showToolbar()), toolbar, SLOT(show()));
-    connect(view, SIGNAL(hideToolbar()), toolbar, SLOT(hide()));
 
     // Connect to toolbar
     connect(toolbar, SIGNAL(open()), SLOT(open()));

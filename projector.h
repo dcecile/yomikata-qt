@@ -25,6 +25,7 @@ public:
     void retrieveDisplay(QRect *rect0, QRect *rect1);
 
     void setViewSize(const QSize &size);
+    QSize viewSize() const;
     QSize fullSize() const;
 
     void paint(QPainter *painter, const QRect &updateRect);

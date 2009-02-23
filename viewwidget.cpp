@@ -3,20 +3,32 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QMouseEvent>
+#include <QLayout>
 
 #include "steward.h"
+#include "toolbarwidget.h"
+#include "debug.h"
 
-ViewWidget::ViewWidget(Steward &steward, QWidget *parent)
-    : QWidget(parent), _steward(steward)
+const int ViewWidget::SHADOW_WIDTH = 64;
+const int ViewWidget::SHADOW_HEIGHT = 8;
+const int ViewWidget::SHADOW_TONE = 0;
+const int ViewWidget::SHADOW_FADE = 64;
+
+ViewWidget::ViewWidget(Steward &steward, ToolbarWidget *toolbar, QWidget *parent)
+    : QWidget(parent), _steward(steward), _shadow(SHADOW_WIDTH, SHADOW_HEIGHT, QImage::Format_ARGB32_Premultiplied)
 {
-    // Use a darker background colour
-    QPalette newPalette = palette();
-    QColor color = newPalette.color(QPalette::Window);
-    qreal value = color.valueF() + (value > 0.5 ?0.02 :-0.02);
-    color.setHsvF(color.hueF(), color.saturationF(), value);
-    newPalette.setColor(QPalette::Window, color);
-    setPalette(newPalette);
-    setAutoFillBackground(true);
+	_toolbar = toolbar;
+
+    // Make the shadow
+    _shadow.fill(qRgba(0, 0, 0, 0));
+    QPainter painter(&_shadow);
+    QLinearGradient gradient(0, 0, 0, SHADOW_HEIGHT);
+    gradient.setColorAt(0.0, QColor(SHADOW_TONE, SHADOW_TONE, SHADOW_TONE, SHADOW_FADE));
+    gradient.setColorAt(0.25, QColor(SHADOW_TONE, SHADOW_TONE, SHADOW_TONE, SHADOW_FADE / 2));
+    gradient.setColorAt(1.0, Qt::transparent);
+    painter.setBrush(gradient);
+    painter.setPen(Qt::NoPen);
+    painter.drawRect(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 
     // Subscribe to mouse movement
     setMouseTracking(true);
@@ -36,14 +48,19 @@ ViewWidget::~ViewWidget()
 {
 }
 
+int ViewWidget::toolbarHeight() const
+{
+	return parentWidget()->height() - height();
+}
+
 QSize ViewWidget::sizeHint() const
 {
-    return QSize(200, 100);
+    return QSize(200, 100 - toolbarHeight());
 }
 
 int ViewWidget::heightForWidth(int width) const
 {
-    return (width * 3 + 2) / 4;
+    return (width * 3 + 2) / 4 - toolbarHeight();
 }
 
 void ViewWidget::mousePressEvent(QMouseEvent *event)
@@ -59,7 +76,7 @@ void ViewWidget::mousePressEvent(QMouseEvent *event)
             setCursor(Qt::ArrowCursor);
 
             // Show the toolbar
-            emit showToolbar();
+            _toolbar->startShow();
         }
         else
         {
@@ -67,15 +84,18 @@ void ViewWidget::mousePressEvent(QMouseEvent *event)
             setCursor(Qt::BlankCursor);
 
             // Hide the toolbar
-            emit hideToolbar();
+            _toolbar->startHide();
         }
     }
 }
 
 void ViewWidget::resizeEvent(QResizeEvent *event)
 {
+	// Include the toolbar height in the total height
+	QSize size = parentWidget()->size();
+
     // Pass on the new size to the steward
-    _steward.setViewSize(event->size());
+    _steward.setViewSize(size);
 }
 
 void ViewWidget::paintEvent(QPaintEvent *event)
@@ -84,8 +104,22 @@ void ViewWidget::paintEvent(QPaintEvent *event)
     QPainter painter(this);
     QRect updateRect = event->rect();
 
+    // Paint under the toolbar
+    int underHeight = toolbarHeight();
+    painter.translate(QPoint(0, -underHeight));
+    updateRect.translate(0, underHeight);
+
     // Get the steward to paint
     _steward.paintView(&painter, updateRect);
+
+    // Paint on a shadow if needed
+    if (underHeight > 0)
+    {
+    	for (int x = 0; x < updateRect.right(); x += SHADOW_WIDTH)
+    	{
+    		painter.drawImage(x, underHeight, _shadow);
+    	}
+    }
 }
 
 void ViewWidget::mouseMoveEvent(QMouseEvent *event)
@@ -93,8 +127,12 @@ void ViewWidget::mouseMoveEvent(QMouseEvent *event)
     // Ignore if using the toolbar
     if (!_usingToolbar)
     {
+    	// Offset by toolbar height
+    	QPointF pos = event->posF();
+    	pos.ry() += toolbarHeight();
+
         // Tell the steward the mosue moved
-        _steward.mouseMoved(event->posF());
+        _steward.mouseMoved(pos);
     }
 }
 

@@ -166,9 +166,16 @@ void Steward::decodeDone(int index, QPixmap page)
     }
 }
 
+/**
+ * @todo More sophisticated do-nothing resize checks
+ */
 void Steward::setViewSize(const QSize &size)
 {
-    debug()<<"Resized"<<size;
+	// Skip the update if nothing's changed
+	if (size == _projector.viewSize())
+	{
+		return;
+	}
 
     // Notify the projector
     _projector.setViewSize(size);

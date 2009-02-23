@@ -5,10 +5,21 @@
 #include <QLabel>
 #include <QFrame>
 #include <QSlider>
+#include <QStyle>
+
+#include "debug.h"
+
+const int ToolbarWidget::FRAME_WIDTH = 0;
+const int ToolbarWidget::SLIDE_DURATION = 150;
+const float ToolbarWidget::SLIDE_FRAMES_PER_SECOND = 60.0;
 
 ToolbarWidget::ToolbarWidget(QWidget *parent)
-    : QWidget(parent)
+    : QFrame(parent)
 {
+	// Raised panel
+	setFrameStyle(StyledPanel | QFrame::Raised);
+	setLineWidth(FRAME_WIDTH);
+
     // No vertical expanding
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
@@ -21,60 +32,62 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         mainLayout->addLayout(layout);
 
         // Go to
-        QPushButton *goTo = new QPushButton("Go to", this);
-        goTo->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *goTo = makeButton("Go to");
         layout->addWidget(goTo);
 
         // Page label
         QLabel *page = new QLabel("Page 3 / 50", this);
-        page->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        page->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
         layout->addWidget(page);
+        layout->addStretch();
 
         // Rule
         QFrame *rule1 = new QFrame(this);
         rule1->setFrameShape(QFrame::VLine);
         rule1->setFrameShadow(QFrame::Sunken);
-        layout->addStretch();
         layout->addWidget(rule1);
         layout->addStretch();
 
+        // Fullscreen
+        QPushButton *fullscreen = makeButton("Fullscreen");
+        layout->addWidget(fullscreen);
+        layout->addStretch();
+
         // Zoom
-        QPushButton *zoom = new QPushButton("Zoom", this);
-        zoom->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *zoom = makeButton("Zoom");
         layout->addWidget(zoom);
 
         // Zoom label
         QLabel *zoomLabel = new QLabel("1x", this);
-        zoomLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        zoomLabel->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
         layout->addWidget(zoomLabel);
+        layout->addStretch();
 
         // Rule
         QFrame *rule2 = new QFrame(this);
         rule2->setFrameShape(QFrame::VLine);
         rule2->setFrameShadow(QFrame::Sunken);
-        layout->addStretch();
         layout->addWidget(rule2);
         layout->addStretch();
 
         // Open
-        QPushButton *open = new QPushButton("Open", this);
-        open->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *open = makeButton("Open");
         connect(open, SIGNAL(clicked()), SIGNAL(open()));
         layout->addWidget(open);
+        layout->addStretch();
 
         // Bookmarks
-        QPushButton *bookmarks = new QPushButton("Bookmarks", this);
-        bookmarks->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *bookmarks = makeButton("Bookmarks");
         layout->addWidget(bookmarks);
+        layout->addStretch();
 
         // Settings
-        QPushButton *settings = new QPushButton("Settings", this);
-        settings->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *settings = makeButton("Settings");
         layout->addWidget(settings);
+        layout->addStretch();
 
         // Quit
-        QPushButton *quit = new QPushButton("Quit", this);
-        quit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *quit = makeButton("Quit");
         connect(quit, SIGNAL(clicked()), SIGNAL(quit()));
         layout->addWidget(quit);
     }
@@ -91,8 +104,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         mainLayout->addLayout(layout);
 
         // Done
-        QPushButton *done = new QPushButton("Done", this);
-        done->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QPushButton *done = makeButton("Done");
         layout->addWidget(done, 0);
 
         // Space
@@ -104,7 +116,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
 
         // Page label
         QLabel *page = new QLabel("Page 3 / 50", this);
-        page->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        page->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
         layout->addWidget(page, 0);
 
         // Space
@@ -112,10 +124,76 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
     }
 
     // Zoom controls
+
+    // Get the target height
+    _fullHeight = mainLayout->minimumSize().height();
+
+    // Set up the animations
+    _animation.setFrameRange(0, _fullHeight);
+    _animation.setDuration(SLIDE_DURATION);
+    _animation.setUpdateInterval(int((100.0f / SLIDE_FRAMES_PER_SECOND) + 0.5f));
+    _isShowing = true;
+    connect(&_animation, SIGNAL(frameChanged(int)), SLOT(setShownHeight(int)));
 }
 
 ToolbarWidget::~ToolbarWidget()
 {
+}
+
+QPushButton *ToolbarWidget::makeButton(const QString &text)
+{
+    QPushButton *button = new QPushButton(text, this);
+    QFontMetrics metrics = button->fontMetrics();
+    int width = metrics.width(text);
+    QStyle *style = button->style();
+    width += 2 * (style->pixelMetric(QStyle::PM_ButtonMargin) + style->pixelMetric(QStyle::PM_DefaultFrameWidth));
+    button->setMinimumWidth(width);
+    //button->setMaximumWidth(width);
+    button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	return button;
+}
+
+void ToolbarWidget::startShow()
+{
+	if (!_isShowing)
+	{
+		_animation.toggleDirection();
+		_isShowing = true;
+	}
+
+	if (_animation.state() == QTimeLine::NotRunning)
+	{
+		_animation.setCurrentTime(0);
+		_animation.start();
+	}
+}
+
+void ToolbarWidget::startHide()
+{
+	if (_isShowing)
+	{
+		_animation.toggleDirection();
+		_isShowing = false;
+	}
+
+	if (_animation.state() == QTimeLine::NotRunning)
+	{
+		_animation.setCurrentTime(_animation.duration());
+		_animation.start();
+	}
+}
+
+void ToolbarWidget::setShownHeight(int height)
+{
+	if (height == 0)
+	{
+		hide();
+	}
+	else
+	{
+		show();
+	    setContentsMargins(FRAME_WIDTH, FRAME_WIDTH + height - _fullHeight, FRAME_WIDTH, FRAME_WIDTH);
+	}
 }
 
 #include "toolbarwidget.moc"

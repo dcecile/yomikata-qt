@@ -109,6 +109,11 @@ void Projector::setViewSize(const QSize &size)
     _fullSize = (QSizeF(_viewSize) * MAGNIFICATION).toSize();
 }
 
+QSize Projector::viewSize() const
+{
+    return _viewSize;
+}
+
 QSize Projector::fullSize() const
 {
     return _fullSize;
