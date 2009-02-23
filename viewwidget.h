@@ -1,7 +1,7 @@
 #ifndef VIEWWIDGET_H
 #define VIEWWIDGET_H
 
-#include <QWidget>
+#include <QFrame>
 
 class Steward;
 
@@ -16,13 +16,19 @@ public:
     QSize sizeHint() const;
     int heightForWidth(int width) const;
 
+signals:
+    void showToolbar();
+    void hideToolbar();
+
 private:
+    void mousePressEvent(QMouseEvent *event);
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
 
 private:
     Steward &_steward;
+    bool _usingToolbar;
 };
 
 #endif

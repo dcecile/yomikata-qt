@@ -18,6 +18,9 @@ ViewWidget::ViewWidget(Steward &steward, QWidget *parent)
     // Connect to refresh signals
     connect(&_steward, SIGNAL(viewUpdate()), SLOT(update()));
     connect(&_steward, SIGNAL(viewRepaint()), SLOT(repaint()));
+
+    // Start reading, not using toolbar
+    _usingToolbar = false;
 }
 
 ViewWidget::~ViewWidget()
@@ -32,6 +35,32 @@ QSize ViewWidget::sizeHint() const
 int ViewWidget::heightForWidth(int width) const
 {
     return (width * 3 + 2) / 4;
+}
+
+void ViewWidget::mousePressEvent(QMouseEvent *event)
+{
+    // Enable/disable toolbar
+    if (event->button() == Qt::LeftButton)
+    {
+        _usingToolbar = !_usingToolbar;
+
+        if (_usingToolbar)
+        {
+            // Show the cursor
+            setCursor(Qt::ArrowCursor);
+
+            // Show the toolbar
+            emit showToolbar();
+        }
+        else
+        {
+            // Hide the cursor
+            setCursor(Qt::BlankCursor);
+
+            // Hide the toolbar
+            emit hideToolbar();
+        }
+    }
 }
 
 void ViewWidget::resizeEvent(QResizeEvent *event)
@@ -52,8 +81,12 @@ void ViewWidget::paintEvent(QPaintEvent *event)
 
 void ViewWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    // Tell the steward the mosue moved
-    _steward.mouseMoved(event->posF());
+    // Ignore if using the toolbar
+    if (!_usingToolbar)
+    {
+        // Tell the steward the mosue moved
+        _steward.mouseMoved(event->posF());
+    }
 }
 
 #include "viewwidget.moc"

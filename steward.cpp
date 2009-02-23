@@ -9,7 +9,6 @@
 #include "strategist.h"
 #include "artificer.h"
 #include "projector.h"
-#include "debugwidget.h"
 
 Steward::Steward(QObject *parent)
     : QObject(parent),
@@ -19,8 +18,7 @@ Steward::Steward(QObject *parent)
     _indexer(*new Indexer(_archive, this)),
     _strategist(*new Strategist(_book, _lock, this)),
     _artificer(*new Artificer(_archive, _indexer, _strategist, this)),
-    _projector(*new Projector(NULL)),
-    _debugWidget(new DebugWidget(_book, NULL))
+    _projector(*new Projector(NULL))
 {
     // Connect
     connect(&_book, SIGNAL(dualCausedPageChange()), SLOT(dualCausedPageChange()));
@@ -37,11 +35,6 @@ Steward::~Steward()
 {
     // Stop the threads first
     delete &_artificer;
-}
-
-QWidget *Steward::debugWidget()
-{
-    return _debugWidget;
 }
 
 void Steward::reset(const QString &filename)

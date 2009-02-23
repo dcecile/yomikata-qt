@@ -1,15 +1,15 @@
 #include "mainwindow.h"
 
-#include <QVBoxLayout>
+#include <QBoxLayout>
 #include <QLabel>
 #include <QDir>
 #include <QWheelEvent>
 #include <QMouseEvent>
-#include <QSplitter>
 #include <QTime>
 
 #include "debug.h"
 #include "steward.h"
+#include "toolbarwidget.h"
 #include "viewwidget.h"
 
 MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
@@ -18,18 +18,38 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     // Make the steward
     _steward = new Steward(this);
 
-    QSplitter *splitter = new QSplitter(Qt::Vertical, this);
-    setCentralWidget(splitter);
+    QWidget *mainWidget = new QWidget(this);
+    setCentralWidget(mainWidget);
+
+    QVBoxLayout *layout = new QVBoxLayout(mainWidget);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    // Add the toolbar
+    ToolbarWidget *toolbar = new ToolbarWidget(this);
+    toolbar->hide();
+    layout->addWidget(toolbar);
 
     // Add the view widget
-    QWidget *viewWidget = new ViewWidget(*_steward, this);
-    splitter->addWidget(viewWidget);
+    ViewWidget *view = new ViewWidget(*_steward, this);
+    layout->addWidget(view);
 
-    // Add the debug widget
-    _debugWidget = _steward->debugWidget();
-    _debugWidget->setParent(this);
-    splitter->addWidget(_debugWidget);
-    _debugWidget->hide();
+    // Enable things
+    _zoomToggleEnabled = true;
+    _zoomInEnabled = true;
+    _zoomOutEnabled = true;
+
+    // Connect view
+    connect(view, SIGNAL(showToolbar()), toolbar, SLOT(show()));
+    connect(view, SIGNAL(hideToolbar()), toolbar, SLOT(hide()));
+
+    // Connect to toolbar
+    connect(toolbar, SIGNAL(open()), SLOT(open()));
+    connect(toolbar, SIGNAL(quit()), SLOT(close()));
+
+    // Connect to controls
+    connect(this, SIGNAL(nextPage()), _steward, SLOT(next()));
+    connect(this, SIGNAL(previousPage()), _steward, SLOT(previous()));
+    connect(this, SIGNAL(shiftNextPage()), _steward, SLOT(shiftNext()));
 
     // Start opening the initial file
     if (!initialArg.isEmpty())
@@ -44,16 +64,6 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
             setSource(initialArg);
         }
     }
-
-    // Enable things
-    _zoomToggleEnabled = true;
-    _zoomInEnabled = true;
-    _zoomOutEnabled = true;
-
-    // Connect
-    connect(this, SIGNAL(nextPage()), _steward, SLOT(next()));
-    connect(this, SIGNAL(previousPage()), _steward, SLOT(previous()));
-    connect(this, SIGNAL(shiftNextPage()), _steward, SLOT(shiftNext()));
 }
 
 MainWindow::~MainWindow()
@@ -64,18 +74,6 @@ MainWindow::~MainWindow()
 QSize MainWindow::sizeHint() const
 {
     return QSize(800, 600);
-}
-
-void MainWindow::showDebugWidget(bool toggled)
-{
-    if (toggled)
-    {
-        _debugWidget->show();
-    }
-    else
-    {
-        _debugWidget->hide();
-    }
 }
 
 void MainWindow::setSource(const QString &filename)

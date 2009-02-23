@@ -5,6 +5,7 @@ set(yomikata_SRCS
     mainwindow.cpp
 
     viewwidget.cpp
+    toolbarwidget.cpp
 
     steward.cpp
     artificer.cpp
@@ -22,9 +23,6 @@ set(yomikata_SRCS
     scroller.cpp
     loadingsprite.cpp
     pagesprite.cpp
-
-    debugwidget.cpp
-    debugpageitem.cpp
 
     mean.cpp
     debug.cpp

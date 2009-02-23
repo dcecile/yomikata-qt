@@ -29,14 +29,6 @@ MainWindowQt::MainWindowQt(const QString &initialArg, QWidget *parent)
     addAction(quit);
     connect(quit, SIGNAL(triggered()), QCoreApplication::instance(), SLOT(quit()));
 
-    // Show debug shortcut
-    QAction *debug = new QAction(this);
-    debug->setCheckable(true);
-    debug->setShortcut(Qt::Key_D);
-    debug->setShortcutContext(Qt::ApplicationShortcut);
-    addAction(debug);
-    connect(debug, SIGNAL(toggled(bool)), SLOT(showDebugWidget(bool)));
-
     // Next page shortcut
     QAction *nextPage = new QAction(this);
     nextPage->setShortcuts(QList<QKeySequence>()<<Qt::Key_Space<<Qt::Key_PageDown<<Qt::Key_Left);

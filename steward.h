@@ -6,8 +6,6 @@
 #include <QPixmap>
 #include <QMutex>
 
-class QWidget;
-
 class Book;
 class Archive;
 class Indexer;
@@ -62,8 +60,6 @@ private:
     Strategist &_strategist;
     Artificer &_artificer;
     Projector &_projector;
-
-    QWidget *_debugWidget;
 
     bool _buildingIndexer;
 };

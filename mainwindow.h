@@ -28,11 +28,11 @@ signals:
     void previousPage();
     void shiftNextPage();
 
-protected slots:
-    void showDebugWidget(bool toggled);
-
 protected:
     void setSource(const QString &filename);
+
+protected slots:
+    virtual void open() = 0;
 
 private:
     void wheelEvent(QWheelEvent *event);
@@ -40,7 +40,6 @@ private:
 
 private:
     Steward *_steward;
-    QWidget *_debugWidget;
     bool _zoomToggleEnabled;
     bool _zoomInEnabled;
     bool _zoomOutEnabled;
