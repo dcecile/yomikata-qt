@@ -7,7 +7,7 @@
 #include "debug.h"
 #include "displaymetrics.h"
 
-const double Projector::MAGNIFICATION = 2.0;
+const double Projector::MAGNIFICATION = 1.0;
 const double Projector::FRAMES_PER_SECOND = 60.0;
 
 Projector::Projector(QObject *parent)
@@ -24,7 +24,6 @@ Projector::Projector(QObject *parent)
     _refreshTimer.setInterval(int(1000.0 / FRAMES_PER_SECOND + 0.5));
     _refreshTimer.setSingleShot(true);
     connect(&_refreshTimer, SIGNAL(timeout()), SLOT(refresh()));
-
 }
 
 Projector::~Projector()

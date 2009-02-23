@@ -9,6 +9,15 @@
 ViewWidget::ViewWidget(Steward &steward, QWidget *parent)
     : QWidget(parent), _steward(steward)
 {
+    // Use a darker background colour
+    QPalette newPalette = palette();
+    QColor color = newPalette.color(QPalette::Window);
+    qreal value = color.valueF() + (value > 0.5 ?0.02 :-0.02);
+    color.setHsvF(color.hueF(), color.saturationF(), value);
+    newPalette.setColor(QPalette::Window, color);
+    setPalette(newPalette);
+    setAutoFillBackground(true);
+
     // Subscribe to mouse movement
     setMouseTracking(true);
 
