@@ -33,6 +33,7 @@ protected:
 
 protected slots:
     virtual void open() = 0;
+    virtual void fullscreen(bool toggled) = 0;
 
 private:
     void wheelEvent(QWheelEvent *event);

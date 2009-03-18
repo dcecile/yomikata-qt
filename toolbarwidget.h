@@ -18,6 +18,10 @@ public:
 	void startHide();
 
 signals:
+	void nextPage();
+	void previousPage();
+	void shiftNextPage();
+	void fullscreen(bool toggled);
     void open();
     void quit();
 

@@ -42,6 +42,10 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     // Connect to toolbar
     connect(toolbar, SIGNAL(open()), SLOT(open()));
     connect(toolbar, SIGNAL(quit()), SLOT(close()));
+    connect(toolbar, SIGNAL(nextPage()), SIGNAL(nextPage()));
+    connect(toolbar, SIGNAL(previousPage()), SIGNAL(previousPage()));
+    connect(toolbar, SIGNAL(shiftNextPage()), SIGNAL(shiftNextPage()));
+    connect(toolbar, SIGNAL(fullscreen(bool)), SLOT(fullscreen(bool)));
 
     // Connect to controls
     connect(this, SIGNAL(nextPage()), _steward, SLOT(next()));

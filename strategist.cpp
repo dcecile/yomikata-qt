@@ -151,9 +151,9 @@ DisplayMetrics Strategist::layOutPages(QSize fullSize0, QSize fullSize1)
 
     // Position the target rectangles
 
-    // Manga mode
-    displayMetrics.pages[1].moveTo(combinedTarget.topLeft());
-    displayMetrics.pages[0].moveTo(combinedTarget.topLeft() + QPoint(displayMetrics.pages[1].width(), 0));
+    // Non-manga mode
+    displayMetrics.pages[0].moveTo(combinedTarget.topLeft());
+    displayMetrics.pages[1].moveTo(combinedTarget.topLeft() + QPoint(displayMetrics.pages[1].width(), 0));
 
     return displayMetrics;
 }

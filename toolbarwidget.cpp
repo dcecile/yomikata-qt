@@ -31,6 +31,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         QHBoxLayout *layout = new QHBoxLayout();
         mainLayout->addLayout(layout);
 
+        /*
         // Go to
         QPushButton *goTo = makeButton("Go to");
         layout->addWidget(goTo);
@@ -39,6 +40,25 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         QLabel *page = new QLabel("Page 3 / 50", this);
         page->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
         layout->addWidget(page);
+        layout->addStretch();
+        //*/
+
+        // Page previous
+        QPushButton *previousPage = makeButton("Previous Page");
+        connect(previousPage, SIGNAL(clicked()), SIGNAL(previousPage()));
+        layout->addWidget(previousPage);
+        layout->addStretch();
+
+        // Page next
+        QPushButton *nextPage = makeButton("Next Page");
+        connect(nextPage, SIGNAL(clicked()), SIGNAL(nextPage()));
+        layout->addWidget(nextPage);
+        layout->addStretch();
+
+        // Page shift next
+        QPushButton *shiftNextPage = makeButton("Shift Pages");
+        connect(shiftNextPage, SIGNAL(clicked()), SIGNAL(shiftNextPage()));
+        layout->addWidget(shiftNextPage);
         layout->addStretch();
 
         // Rule
@@ -50,9 +70,12 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
 
         // Fullscreen
         QPushButton *fullscreen = makeButton("Fullscreen");
+        fullscreen->setCheckable(true);
+        connect(fullscreen, SIGNAL(toggled(bool)), SIGNAL(fullscreen(bool)));
         layout->addWidget(fullscreen);
         layout->addStretch();
 
+        /*
         // Zoom
         QPushButton *zoom = makeButton("Zoom");
         layout->addWidget(zoom);
@@ -62,6 +85,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         zoomLabel->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
         layout->addWidget(zoomLabel);
         layout->addStretch();
+        //*/
 
         // Rule
         QFrame *rule2 = new QFrame(this);
@@ -76,6 +100,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         layout->addWidget(open);
         layout->addStretch();
 
+        /*
         // Bookmarks
         QPushButton *bookmarks = makeButton("Bookmarks");
         layout->addWidget(bookmarks);
@@ -85,12 +110,15 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
         QPushButton *settings = makeButton("Settings");
         layout->addWidget(settings);
         layout->addStretch();
+        //*/
 
         // Quit
         QPushButton *quit = makeButton("Quit");
         connect(quit, SIGNAL(clicked()), SIGNAL(quit()));
         layout->addWidget(quit);
     }
+
+    /*
 
     // Rule
     QFrame *rule = new QFrame(this);
@@ -124,6 +152,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
     }
 
     // Zoom controls
+	//*/
 
     // Get the target height
     _fullHeight = mainLayout->minimumSize().height();
