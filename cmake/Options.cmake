@@ -8,16 +8,10 @@ option(
 option(
     UNIT_TESTING
     "Build unit testing version."
-    ON
+    OFF
 )
 option(
     CODE_COVERAGE
     "Build code coverage version."
-    ON
-)
-
-option(
-    QT_ONLY
-    "Build version that uses QT and not KDE."
-    ON
+    OFF
 )
