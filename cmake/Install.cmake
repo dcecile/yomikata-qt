@@ -12,6 +12,9 @@ if(WIN32 AND NOT UNIX)
     endif()
     if(QT_USE_QTNETWORK)
         find_library(QT_QTNETWORK_DLL "QtNetwork4.dll")
+        find_library(OPENSSL1_DLL "libssl32.dll")
+        find_library(OPENSSL2_DLL "ssleay32.dll")
+        find_library(OPENSSL3_DLL "libeay32.dll")
     endif()
     if(QT_USE_QTOPENGL)
         find_library(QT_QTOPENGL4_DLL "QtOpenGL4.dll")
@@ -43,6 +46,7 @@ if(WIN32 AND NOT UNIX)
         ${QT_QTHELP_DLL} ${QT_QTNETWORK_DLL} ${QT_QTOPENGL4_DLL}
             ${QT_QTSCRIPT_DLL} ${QT_QTSQL_DLL} ${QT_QTSVG_DLL} ${QT_QTTEST_DLL}
             ${QT_QTWEBKIT_DLL} ${QT_QTXML_DLL} ${QT_QTXMLPATTERNS_DLL}  
+            ${OPENSSL1_DLL} ${OPENSSL2_DLL} ${OPENSSL3_DLL}
         DESTINATION ${BIN_INSTALL_DIR})
 endif()
 
