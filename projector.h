@@ -19,10 +19,10 @@ public:
     Projector(QObject *parent = NULL);
     ~Projector();
 
-    void setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
-    void updateDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
+    void clear(const DisplayMetrics &displayMetrics);
+    void update(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1);
 
-    void retrieveDisplay(QRect *rect0, QRect *rect1);
+    bool tryUpdate(const DisplayMetrics &displayMetrics);
 
     void setViewSize(const QSize &size);
     QSize viewSize() const;
@@ -48,10 +48,10 @@ private:
     bool _isShown[2];
     bool _isLoading[2];
     QRect _placement[2];
+    int _index[2];
     Scroller _scroller;
     LoadingSprite _loadingSprite;
-    PageSprite _pageSprite0;
-    PageSprite _pageSprite1;
+    PageSprite _pageSprite[2];
     QTimer _refreshTimer;
     bool _refreshRequested;
 };

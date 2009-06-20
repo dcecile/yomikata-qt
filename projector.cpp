@@ -7,7 +7,7 @@
 #include "debug.h"
 #include "displaymetrics.h"
 
-const double Projector::MAGNIFICATION = 1.0;
+const double Projector::MAGNIFICATION = 2.0;
 const double Projector::FRAMES_PER_SECOND = 60.0;
 
 Projector::Projector(QObject *parent)
@@ -30,51 +30,39 @@ Projector::~Projector()
 {
 }
 
-void Projector::setDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1)
+void Projector::clear(const DisplayMetrics &displayMetrics)
 {
     // Reset the scroller to the pages start with the new extent
     _scroller.reset(displayMetrics.slack);
 
-    // Set to blank / loading
+    // Set to pure blank
     _isShown[0] = false;
     _isShown[1] = false;
     _isLoading[0] = true;
     _isLoading[1] = true;
-    //debug()<<"Reset";
 
-    // Update to the current
-    updateDisplay(displayMetrics, pixmap0, pixmap1);
+    // Set up the loading rects
+    update(displayMetrics, QPixmap(), QPixmap());
 }
 
-void Projector::updateDisplay(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1)
+void Projector::update(const DisplayMetrics &displayMetrics, const QPixmap &pixmap0, const QPixmap &pixmap1)
 {
-    if (!displayMetrics.pages[0].isNull())
+    const QPixmap *pixmap[] = {&pixmap0, &pixmap1};
+
+    for (int i = 0; i < 2; i++)
     {
-        // Update the position
-        _isShown[0] = true;
-        _placement[0] = displayMetrics.pages[0];
-
-        if (!pixmap0.isNull())
+        if (!displayMetrics.pages[i].isNull())
         {
-            // Pixmap loaded
-            //debug()<<"Pixmap 0"<<_isLoading[1];
-            _isLoading[0] = false;
-            _pageSprite0.setPixmap(pixmap0);
-        }
-    }
+            // Update the position
+            _isShown[i] = true;
+            _placement[i] = displayMetrics.pages[i];
 
-    if (displayMetrics.pages[1].isValid())
-    {
-        // Update the position
-        _isShown[1] = true;
-        _placement[1] = displayMetrics.pages[1];
-
-        if (!pixmap1.isNull())
-        {
-            // Pixmap loaded
-            //debug()<<"Pixmap 1"<<_isLoading[0];
-            _isLoading[1] = false;
-            _pageSprite1.setPixmap(pixmap1);
+            if (!pixmap[i]->isNull())
+            {
+                // Pixmap loaded
+                _isLoading[i] = false;
+                _pageSprite[i].setPixmap(*pixmap[i]);
+            }
         }
     }
 
@@ -82,25 +70,51 @@ void Projector::updateDisplay(const DisplayMetrics &displayMetrics, const QPixma
     emit update();
 }
 
-void Projector::retrieveDisplay(QRect *rect0, QRect *rect1)
+bool Projector::tryUpdate(const DisplayMetrics &displayMetrics)
 {
-    if (_isShown[0])
+    bool failed = false;
+    bool updateNeeded = false;
+
+    for (int i = 0; !failed && i < 2; i++)
     {
-        *rect0 = _placement[0];
-    }
-    else
-    {
-        *rect0 = QRect();
+        if (!displayMetrics.pages[i].isNull())
+        {
+            // Has to match
+            Q_ASSERT(_isShown[i]);
+
+            // No problem loading size changes
+            // Or displayed position changes
+            if (_isLoading[i] || _placement[i].size() == displayMetrics.pages[i].size())
+            {
+                if (_placement[i] != displayMetrics.pages[i])
+                {
+                    _placement[i] = displayMetrics.pages[i];
+                    updateNeeded = true;
+                }
+            }
+            else
+            {
+                failed = true;
+            }
+        }
     }
 
-    if (_isShown[1])
+    if (failed)
     {
-        *rect1 = _placement[1];
+        clear(displayMetrics);
     }
     else
     {
-        *rect1 = QRect();
+        // Update the scroller's bounds because the total width maybe changed
+        _scroller.update(displayMetrics.slack);
     }
+
+    if (failed || updateNeeded)
+    {
+        emit update();
+    }
+
+    return !failed;
 }
 
 void Projector::setViewSize(const QSize &size)
@@ -138,35 +152,22 @@ void Projector::paint(QPainter *painter, const QRect &updateRect)
     }
     else
     {
-        if (_isShown[0])
+        for (int i = 0; i < 2; i++)
         {
-            if (_isLoading[0])
+            if (_isShown[i])
             {
-                // First loading
-                _loadingSprite.setGeometry(scrolled[0]);
-                _loadingSprite.paint(painter, updateRect);
-            }
-            else
-            {
-                // First shown
-                _pageSprite0.setTopLeft(scrolled[0].topLeft());
-                _pageSprite0.paint(painter, updateRect);
-            }
-        }
-
-        if (_isShown[1])
-        {
-            if (_isLoading[1])
-            {
-                // Second loading
-                _loadingSprite.setGeometry(scrolled[1]);
-                _loadingSprite.paint(painter, updateRect);
-            }
-            else
-            {
-                // Second shown
-                _pageSprite1.setTopLeft(scrolled[1].topLeft());
-                _pageSprite1.paint(painter, updateRect);
+                if (_isLoading[i])
+                {
+                    // Loading
+                    _loadingSprite.setGeometry(scrolled[i]);
+                    _loadingSprite.paint(painter, updateRect);
+                }
+                else
+                {
+                    // Shown
+                    _pageSprite[i].setTopLeft(scrolled[i].topLeft());
+                    _pageSprite[i].paint(painter, updateRect);
+                }
             }
         }
     }

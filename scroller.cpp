@@ -39,6 +39,16 @@ void Scroller::reset(const QSize &extent)
     _scrollPos.setY(0.0);
 }
 
+void Scroller::update(const QSize &extent)
+{
+    // If extent changed, go back to the top right
+    // ie. a new total width has been calculated
+    if (_extent != extent)
+    {
+        reset(extent);
+    }
+}
+
 QPoint Scroller::position()
 {
     // Finish with the last force parameters

@@ -142,6 +142,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
     // Middle mouse triggers paging forward one page
     if (event->button() == Qt::MidButton)
     {
+        debug()<<"Shifting";
         emit shiftNextPage();
     }
 

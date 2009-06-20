@@ -34,7 +34,7 @@ ViewWidget::ViewWidget(Steward &steward, ToolbarWidget *toolbar, QWidget *parent
     setMouseTracking(true);
 
     // Hide the cursor
-    //setCursor(Qt::BlankCursor);
+    setCursor(Qt::BlankCursor);
 
     // Connect to refresh signals
     connect(&_steward, SIGNAL(viewUpdate()), SLOT(update()));
@@ -73,7 +73,7 @@ void ViewWidget::mousePressEvent(QMouseEvent *event)
         if (_usingToolbar)
         {
             // Show the cursor
-            //setCursor(Qt::ArrowCursor);
+            setCursor(Qt::ArrowCursor);
 
             // Show the toolbar
             _toolbar->startShow();
@@ -81,18 +81,23 @@ void ViewWidget::mousePressEvent(QMouseEvent *event)
         else
         {
             // Hide the cursor
-            //setCursor(Qt::BlankCursor);
+            setCursor(Qt::BlankCursor);
 
             // Hide the toolbar
             _toolbar->startHide();
         }
     }
+    // Pass on other mouse presses
+    else
+    {
+        event->ignore();
+    }
 }
 
 void ViewWidget::resizeEvent(QResizeEvent *event)
 {
-	// Include the toolbar height in the total height
-	QSize size = parentWidget()->size();
+    // Include the toolbar height in the total height
+    QSize size = parentWidget()->size();
 
     // Pass on the new size to the steward
     _steward.setViewSize(size);

@@ -18,6 +18,7 @@ public:
     ~Scroller();
 
     void reset(const QSize &extent);
+    void update(const QSize &extent);
 
     QPoint position();
 

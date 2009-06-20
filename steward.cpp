@@ -45,7 +45,7 @@ void Steward::reset(const QString &filename)
     // Pretend two page book, show loading
     _book.reset(2);
     _strategist.reset();
-    _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
+    _projector.clear(_strategist.pageLayout());
 
     // Retrieve the archive information
     _archive.reset(filename);
@@ -64,7 +64,7 @@ void Steward::indexerBuilt()
     // Don't do anything with an empty book
     if (_indexer.numPages() == 0)
     {
-        _projector.setDisplay(DisplayMetrics(), QPixmap(), QPixmap());
+        _projector.clear(DisplayMetrics());
         return;
     }
 
@@ -112,7 +112,7 @@ void Steward::pageChanged()
 void Steward::loadPages()
 {
     // Display loading
-    _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
+    _projector.clear(_strategist.pageLayout());
 
     // Decode both pages
     int current0 = _book.page0();
@@ -138,7 +138,7 @@ void Steward::decodeDone(int index, QPixmap page)
         if (page.size() == displayMetrics.pages[0].size())
         {
             //qDebug()<<"Page 0"<<displayMetrics.pages[0].topLeft();
-            _projector.updateDisplay(displayMetrics, page, QPixmap());
+            _projector.update(displayMetrics, page, QPixmap());
         }
         // Or try decoding again, if needed
         else
@@ -155,7 +155,7 @@ void Steward::decodeDone(int index, QPixmap page)
         if (page.size() == displayMetrics.pages[1].size())
         {
             //qDebug()<<"Page 1"<<displayMetrics.pages[1].topLeft();
-            _projector.updateDisplay(displayMetrics, QPixmap(), page);
+            _projector.update(displayMetrics, QPixmap(), page);
         }
         // Or try decoding again, if needed
         else
@@ -187,7 +187,7 @@ void Steward::setViewSize(const QSize &size)
     if (_buildingIndexer)
     {
         // Resize the loading indicators
-        _projector.setDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
+        _projector.clear(_strategist.pageLayout());
     }
     // Check that there is a book
     else if (_book.numPages() > 0)
@@ -220,23 +220,12 @@ void Steward::recievedFullPageSize(int index)
 
     if (current0 == index || current1 == index)
     {
-        // Get what's displayed
-        QRect displayed0;
-        QRect displayed1;
-        _projector.retrieveDisplay(&displayed0, &displayed1);
+        bool updated = _projector.tryUpdate(_strategist.pageLayout());
 
-        // Get what should be displayed
-        DisplayMetrics metrics = _strategist.pageLayout();
-
-        // If either size is wrong, reload
-        if (metrics.pages[0].size() != displayed0.size() || metrics.pages[1].size() != displayed1.size())
+        if (!updated)
         {
+            debug()<<"Not updated";
             loadPages();
-        }
-        // Otherwise, update the positions
-        else
-        {
-            _projector.updateDisplay(_strategist.pageLayout(), QPixmap(), QPixmap());
         }
     }
 }

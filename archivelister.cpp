@@ -282,7 +282,7 @@ void ArchiveLister::rarParserText()
         // Trim the full line
         _currentInputLine = _currentInputLine.trimmed();
 
-        debug()<<"Length"<<_currentInputLine.length();
+        //debug()<<"Length"<<_currentInputLine.length();
 
         // Skip blank lines
         if (_currentInputLine.length() == 0)
