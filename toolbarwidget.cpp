@@ -16,9 +16,9 @@ const float ToolbarWidget::SLIDE_FRAMES_PER_SECOND = 60.0;
 ToolbarWidget::ToolbarWidget(QWidget *parent)
     : QFrame(parent)
 {
-	// Raised panel
-	setFrameStyle(StyledPanel | QFrame::Raised);
-	setLineWidth(FRAME_WIDTH);
+    // Raised panel
+    setFrameStyle(StyledPanel | QFrame::Raised);
+    setLineWidth(FRAME_WIDTH);
 
     // No vertical expanding
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -152,7 +152,7 @@ ToolbarWidget::ToolbarWidget(QWidget *parent)
     }
 
     // Zoom controls
-	//*/
+    //*/
 
     // Get the target height
     _fullHeight = mainLayout->minimumSize().height();
@@ -179,50 +179,50 @@ QPushButton *ToolbarWidget::makeButton(const QString &text)
     button->setMinimumWidth(width);
     //button->setMaximumWidth(width);
     button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-	return button;
+    return button;
 }
 
 void ToolbarWidget::startShow()
 {
-	if (!_isShowing)
-	{
-		_animation.toggleDirection();
-		_isShowing = true;
-	}
+    if (!_isShowing)
+    {
+        _animation.toggleDirection();
+        _isShowing = true;
+    }
 
-	if (_animation.state() == QTimeLine::NotRunning)
-	{
-		_animation.setCurrentTime(0);
-		_animation.start();
-	}
+    if (_animation.state() == QTimeLine::NotRunning)
+    {
+        _animation.setCurrentTime(0);
+        _animation.start();
+    }
 }
 
 void ToolbarWidget::startHide()
 {
-	if (_isShowing)
-	{
-		_animation.toggleDirection();
-		_isShowing = false;
-	}
+    if (_isShowing)
+    {
+        _animation.toggleDirection();
+        _isShowing = false;
+    }
 
-	if (_animation.state() == QTimeLine::NotRunning)
-	{
-		_animation.setCurrentTime(_animation.duration());
-		_animation.start();
-	}
+    if (_animation.state() == QTimeLine::NotRunning)
+    {
+        _animation.setCurrentTime(_animation.duration());
+        _animation.start();
+    }
 }
 
 void ToolbarWidget::setShownHeight(int height)
 {
-	if (height == 0)
-	{
-		hide();
-	}
-	else
-	{
-		show();
-	    setContentsMargins(FRAME_WIDTH, FRAME_WIDTH + height - _fullHeight, FRAME_WIDTH, FRAME_WIDTH);
-	}
+    if (height == 0)
+    {
+        hide();
+    }
+    else
+    {
+        show();
+        setContentsMargins(FRAME_WIDTH, FRAME_WIDTH + height - _fullHeight, FRAME_WIDTH, FRAME_WIDTH);
+    }
 }
 
 #include "toolbarwidget.moc"

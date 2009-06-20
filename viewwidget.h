@@ -26,10 +26,10 @@ private:
     int toolbarHeight() const;
 
 private:
-	static const int SHADOW_WIDTH;
-	static const int SHADOW_HEIGHT;
-	static const int SHADOW_TONE;
-	static const int SHADOW_FADE;
+    static const int SHADOW_WIDTH;
+    static const int SHADOW_HEIGHT;
+    static const int SHADOW_TONE;
+    static const int SHADOW_FADE;
     Steward &_steward;
     ToolbarWidget *_toolbar;
     bool _usingToolbar;

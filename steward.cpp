@@ -171,11 +171,11 @@ void Steward::decodeDone(int index, QPixmap page)
  */
 void Steward::setViewSize(const QSize &size)
 {
-	// Skip the update if nothing's changed
-	if (size == _projector.viewSize())
-	{
-		return;
-	}
+    // Skip the update if nothing's changed
+    if (size == _projector.viewSize())
+    {
+        return;
+    }
 
     // Notify the projector
     _projector.setViewSize(size);

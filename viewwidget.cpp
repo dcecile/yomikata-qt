@@ -17,7 +17,7 @@ const int ViewWidget::SHADOW_FADE = 64;
 ViewWidget::ViewWidget(Steward &steward, ToolbarWidget *toolbar, QWidget *parent)
     : QWidget(parent), _steward(steward), _shadow(SHADOW_WIDTH, SHADOW_HEIGHT, QImage::Format_ARGB32_Premultiplied)
 {
-	_toolbar = toolbar;
+    _toolbar = toolbar;
 
     // Make the shadow
     _shadow.fill(qRgba(0, 0, 0, 0));
@@ -50,7 +50,7 @@ ViewWidget::~ViewWidget()
 
 int ViewWidget::toolbarHeight() const
 {
-	return parentWidget()->height() - height();
+    return parentWidget()->height() - height();
 }
 
 QSize ViewWidget::sizeHint() const
@@ -120,10 +120,10 @@ void ViewWidget::paintEvent(QPaintEvent *event)
     // Paint on a shadow if needed
     if (underHeight > 0)
     {
-    	for (int x = 0; x < updateRect.right(); x += SHADOW_WIDTH)
-    	{
-    		painter.drawImage(x, underHeight, _shadow);
-    	}
+        for (int x = 0; x < updateRect.right(); x += SHADOW_WIDTH)
+        {
+            painter.drawImage(x, underHeight, _shadow);
+        }
     }
 }
 
@@ -132,9 +132,9 @@ void ViewWidget::mouseMoveEvent(QMouseEvent *event)
     // Ignore if using the toolbar
     if (!_usingToolbar)
     {
-    	// Offset by toolbar height
-    	QPointF pos = event->posF();
-    	pos.ry() += toolbarHeight();
+        // Offset by toolbar height
+        QPointF pos = event->posF();
+        pos.ry() += toolbarHeight();
 
         // Tell the steward the mosue moved
         _steward.mouseMoved(pos);

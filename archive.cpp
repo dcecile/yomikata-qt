@@ -23,11 +23,11 @@ Archive::Archive(QObject *parent)
 
     if (qstrcmp(WINDOWS_FIRST_PATH, ".") == 0)
     {
-    	firstPath = QCoreApplication::applicationDirPath();
+        firstPath = QCoreApplication::applicationDirPath();
     }
     else
     {
-    	firstPath = WINDOWS_FIRST_PATH;
+        firstPath = WINDOWS_FIRST_PATH;
     }
 
     QStringList env = QProcess::systemEnvironment();
@@ -36,7 +36,7 @@ Archive::Archive(QObject *parent)
 
     if ((pathIndex = env.indexOf(QRegExp("^PATH=(.*)", Qt::CaseInsensitive))) != -1)
     {
-    	oldPath = env[pathIndex].right(env[pathIndex].length() - 5);
+        oldPath = env[pathIndex].right(env[pathIndex].length() - 5);
     }
 
     putenv(("PATH=" + firstPath + ";" + oldPath).toLatin1());

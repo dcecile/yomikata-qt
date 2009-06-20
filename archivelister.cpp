@@ -141,7 +141,7 @@ void ArchiveLister::sevenZipParser()
         if (_currentInputLine.startsWith("Path = "))
         {
             // File name is remainder of the line
-        	QByteArray filename = _currentInputLine.right(_currentInputLine.length() - 7);
+            QByteArray filename = _currentInputLine.right(_currentInputLine.length() - 7);
 
             // Only add if an image file
             if (FileClassification::isImageFile(filename))

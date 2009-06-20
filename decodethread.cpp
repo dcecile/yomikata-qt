@@ -258,8 +258,8 @@ void DecodeThread::decode()
 
     if (_archive.type() == Archive::SevenZip)
     {
-    	QFile file(_temporaryFileName);
-    	file.open(QIODevice::WriteOnly);
+        QFile file(_temporaryFileName);
+        file.open(QIODevice::WriteOnly);
         file.write(_indexer.pageName(_pageNum));
         file.write("\n");
         file.close();
@@ -268,7 +268,7 @@ void DecodeThread::decode()
     }
     else
     {
-    	nameArgument = QString::fromLocal8Bit(_indexer.pageName(_pageNum));
+        nameArgument = QString::fromLocal8Bit(_indexer.pageName(_pageNum));
     }
 
     // Start the extracter
