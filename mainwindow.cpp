@@ -26,7 +26,7 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     layout->setSpacing(0);
 
     // Add the toolbar
-    ToolbarWidget *toolbar = new ToolbarWidget(this);
+    ToolbarWidget *toolbar = new ToolbarWidget(*_steward, this);
     toolbar->hide();
     layout->addWidget(toolbar);
 
@@ -38,14 +38,6 @@ MainWindow::MainWindow(const QString &initialArg, QWidget *parent)
     _zoomToggleEnabled = true;
     _zoomInEnabled = true;
     _zoomOutEnabled = true;
-
-    // Connect to toolbar
-    connect(toolbar, SIGNAL(open()), SLOT(open()));
-    connect(toolbar, SIGNAL(quit()), SLOT(close()));
-    connect(toolbar, SIGNAL(nextPage()), SIGNAL(nextPage()));
-    connect(toolbar, SIGNAL(previousPage()), SIGNAL(previousPage()));
-    connect(toolbar, SIGNAL(shiftNextPage()), SIGNAL(shiftNextPage()));
-    connect(toolbar, SIGNAL(fullscreen(bool)), SLOT(fullscreen(bool)));
 
     // Connect to controls
     connect(this, SIGNAL(nextPage()), _steward, SLOT(next()));

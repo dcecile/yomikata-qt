@@ -202,7 +202,7 @@ void Archive::reset(const QString &filename)
         {".cbr", Rar},
         {".7z", SevenZip},
         // Ace
-        // Lzh
+        {".lzh", SevenZip},
         {"", InvalidArchiveType},
     };
 

@@ -55,6 +55,7 @@ public:
     void next();
     void previous();
     void shiftNext();
+    void setPage(int page);
 
     void setDual(int page);
     bool isDual(int page);

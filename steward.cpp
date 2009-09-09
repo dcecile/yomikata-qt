@@ -103,10 +103,22 @@ void Steward::shiftNext()
     }
 }
 
+void Steward::setPage(int page)
+{
+    if (page < _book.numPages())
+    {
+        _book.setPage(page);
+        pageChanged();
+    }
+}
+
 void Steward::pageChanged()
 {
     // Show the current page(s)
     loadPages();
+
+    // Notify that the pages changed
+    emit pageChanged(_book.page0(), _book.numPages());
 }
 
 void Steward::loadPages()

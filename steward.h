@@ -37,10 +37,12 @@ public slots:
     void next();
     void previous();
     void shiftNext();
+    void setPage(int page);
 
 signals:
     void viewUpdate();
     void viewRepaint();
+    void pageChanged(int page, int total);
 
 private slots:
     void indexerBuilt();

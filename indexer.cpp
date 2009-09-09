@@ -82,7 +82,10 @@ void Indexer::listingFinished()
     debug()<<"Listing finished:"<<_listingTime.elapsed()<<" ms"
             <<"--"<<_files.size()<<"entries";
 
-    debug()<<"File"<<_files.front().name;
+    if (_files.size() > 0)
+    {
+        debug()<<"File"<<_files.front().name;
+    }
 
     emit built();
 }

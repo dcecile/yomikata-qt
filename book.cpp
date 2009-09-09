@@ -119,6 +119,33 @@ void Book::previous()
     emit changed();
 }
 
+void Book::setPage(int page)
+{
+    QMutexLocker locker(&_lock);
+
+    Q_ASSERT(0 <= page && page < _numPages);
+    qDebug()<<"Start"<<page<<_page0<<_page1;
+
+    // Go forward while the target is after the first and not at the second
+    while (page > _page0 && page != _page1)
+    {
+        next();
+    }
+
+    // Go backward while the target is before the first
+    while (page < _page0)
+    {
+        previous();
+    }
+
+    // Should be at the target now
+    qDebug()<<"End"<<page<<_page0<<_page1;
+    Q_ASSERT(_page0 == page || _page1 == page);
+
+    // Notify changed
+    emit changed();
+}
+
 /**
  * A shift only happens if currently displaying one or two nondual pages and not
  * at the end of a section; otherwise it is a normal page turn. When actually
