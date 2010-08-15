@@ -1,19 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#ifdef QT_ONLY
-    #include <QMainWindow>
-    typedef QMainWindow MainWindowAncestor;
-#else
-    #include <KXmlGuiWindow>
-    typedef KXmlGuiWindow MainWindowAncestor;
-#endif
+#include <QMainWindow>
 
 #include "book.h"
 
 class Steward;
 
-class MainWindow: public MainWindowAncestor
+class MainWindow: public QMainWindow
 {
     Q_OBJECT
 
@@ -32,8 +26,8 @@ protected:
     void setSource(const QString &filename);
 
 protected slots:
-    virtual void open() = 0;
-    virtual void fullscreen(bool toggled) = 0;
+    void open();
+    void fullscreen(bool toggled);
 
 private:
     void wheelEvent(QWheelEvent *event);

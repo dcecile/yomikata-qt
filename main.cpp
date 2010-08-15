@@ -6,7 +6,7 @@
 #include <QFile>
 #include <QTextCodec>
 
-#include "mainwindowqt.h"
+#include "mainwindow.h"
 #include "debug.h"
 
 #ifndef UNIT_TESTING
@@ -40,7 +40,7 @@ int application_main(int argc, char *argv[])
     }
 
     // Qt doesn't destory main windows automatically
-    MainWindowQt window(arg);
+    MainWindow window(arg);
     window.show();
 
     return app.exec();

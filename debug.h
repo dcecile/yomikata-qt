@@ -6,15 +6,8 @@
  * @todo Resolve compatibility issues.
  */
 
-#ifdef QT_ONLY
-    #include <QDebug>
-    #define debug() qDebug()
-    #undef qDebug
-#else
-    #include <KDebug>
-    #define debug() kDebug()
-    #undef kDebug
-#endif
-
+#include <QDebug>
+#define debug() qDebug()
+#undef qDebug
 
 #endif

@@ -2,6 +2,7 @@ project(yomikata)
 
 # Source files
 set(yomikata_SRCS
+    main.cpp
     mainwindow.cpp
 
     viewwidget.cpp
@@ -26,16 +27,6 @@ set(yomikata_SRCS
 
     mean.cpp
     debug.cpp
-)
-
-set(yomikata_qt_SRCS
-    mainqt.cpp
-    mainwindowqt.cpp
-)
-
-set(yomikata_kde_SRCS
-    mainkde.cpp
-    mainwindowkde.cpp
 )
 
 # Unit test files
@@ -82,8 +73,7 @@ if(WIN32)
 endif()
 
 # Source files
-set(yomikata_SRCS ${yomikata_SRCS} ${yomikata_qt_SRCS})
-add_definitions(-DQT_ONLY)
+set(yomikata_SRCS ${yomikata_SRCS})
 
 # Development options
 if(DEV_MODE)
