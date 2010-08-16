@@ -19,7 +19,7 @@ foreach(src ${yomikata_SRCS})
 endforeach()
 
 add_custom_target(clean_cov ALL
-    COMMAND echo Removing ${gcov_files}
+    #COMMAND echo Removing ${gcov_files}
     COMMAND ${CMAKE_COMMAND} -E remove ${gcov_files}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${CMAKE_PROJECT_NAME}.dir/
     VERBATIM

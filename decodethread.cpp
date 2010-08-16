@@ -1,10 +1,12 @@
 #include "decodethread.h"
 
+#include <QFileInfo>
 #include <QTime>
 #include <QProcess>
 #include <QImageReader>
 #include <QTextCodec>
 #include <QTemporaryFile>
+#include <QtConcurrentRun>
 
 #include "debug.h"
 #include "archive.h"
@@ -254,13 +256,14 @@ void DecodeThread::decode()
     time.start();
 
     // Choose a format for the filename argument
+    QByteArray pageName = _indexer.pageName(_pageNum);
     QString nameArgument;
 
     if (_archive.type() == Archive::SevenZip)
     {
         QFile file(_temporaryFileName);
         file.open(QIODevice::WriteOnly);
-        file.write(_indexer.pageName(_pageNum));
+        file.write(pageName);
         file.write("\n");
         file.close();
 
@@ -268,66 +271,20 @@ void DecodeThread::decode()
     }
     else
     {
-        nameArgument = QString::fromLocal8Bit(_indexer.pageName(_pageNum));
+        nameArgument = QString::fromLocal8Bit(pageName);
     }
 
     // Start the extracter
     //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
+    QTime clock;
+    clock.start();
+
     QProcess extracter;
     QStringList args = _args + QStringList(nameArgument);
     extracter.start(_command, args);
 
-    // Wait for the extracter to finish, until done or cancelled
-    // Note: QImageReader won't decode the whole image unless the whole
-    //  image is ready to be read
-    bool waited;
-
-    do
-    {
-        QTime clock;
-        clock.start();
-        waited = extracter.waitForFinished(CANCELLED_POLLING);
-        //debug()<<"Waited"<<clock.elapsed();
-    }
-    while (!_cancelled && !waited);
-
-    //debug()<<extracter.readAllStandardError();
-
-    // Stop the extracter if cancelled
-    if (_cancelled)
-    {
-        // Send a SIGTERM signal
-        debug()<<"Terminating extracter process after"<<time.elapsed()<<"ms";
-        extracter.terminate();
-
-        // Wait kindly for it to finish
-        bool finished = extracter.waitForFinished(KILL_WAIT);
-
-        // Kill the process if it's still running
-        if (!finished)
-        {
-            debug()<<"Killing extracter process";
-            extracter.kill();
-        }
-
-        return;
-    }
-
-    // Set up the image reader
+    // Set up blocking-IO cancellable proxy
     ImageSource source(&extracter);
-    QImageReader imageReader(&source);
-
-    // If the full size is known, calculate the prescaled size
-    bool prescaled = _strategist.isFullPageSizeKnown(_pageNum);
-
-    if (prescaled)
-    {
-        // Notify the page that the decode size is set
-        QSize targetSize = _strategist.pageLayout(_pageNum).size();
-
-        // Tell the image reader to output prescaled
-        imageReader.setScaledSize(targetSize);
-    }
 
     // Prepare to allow source cancels
     {
@@ -335,10 +292,29 @@ void DecodeThread::decode()
         _imageSource = &source;
     }
 
+    // Set up the image reader
+    QImageReader imageReader(
+        &source,
+        QFileInfo(pageName).suffix().toLower().toLatin1());
+
+    if (!_strategist.isFullPageSizeKnown(_pageNum))
+    {
+        // Retrieve the size
+        QSize fullSize = imageReader.size();
+        Q_ASSERT(fullSize.isValid());
+
+        // Save the size
+        _strategist.setFullPageSize(_pageNum, fullSize);
+    }
+
+    // Set up scaling
+    imageReader.setScaledSize(
+        _strategist.pageLayout(_pageNum).size());
+
     // Decode the image
-    QTime clock;
-    clock.start();
-    _image = imageReader.read();
+    QFuture<QImage> imageFuture = QtConcurrent::run(
+        &imageReader, &QImageReader::read);
+    _image = imageFuture.result();
 
     // Disallow source cancels
     {
@@ -346,39 +322,9 @@ void DecodeThread::decode()
         _imageSource = NULL;
     }
 
-    // Stop if cancelled
-    if (_cancelled)
-    {
-        debug()<<"Cancelled decode after"<<time.elapsed()<<"ms";
-        return;
-    }
-
-    // Assert the decode was okay
-    Q_ASSERT(!_image.isNull());
+    // Assert the decode was okay unless cancelled
+    Q_ASSERT(_cancelled || !_image.isNull());
     //debug()<<"Decode"<<clock.elapsed();
-
-    if (!prescaled)
-    {
-        // The image was decoded at the full size because we "can't" tell the size
-        //  before starting decoding
-
-        // Retrieve the size
-        QSize fullSize = _image.size();
-        Q_ASSERT(fullSize.isValid());
-
-        // Save the size
-        _strategist.setFullPageSize(_pageNum, fullSize);
-
-        // Check if cancelled, after storing the full size
-        if (_cancelled)
-        {
-            return;
-        }
-
-        // Resize the image now
-        QSize targetSize = _strategist.pageLayout(_pageNum).size();
-        _image = _image.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    }
 
     debug()<<"Decoded"<<_pageNum<<"--"<<time.elapsed()<<"ms";
 }
