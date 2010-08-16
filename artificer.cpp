@@ -1,5 +1,8 @@
 #include "artificer.h"
 
+#include <QThread>
+#include <QThreadPool>
+
 #include "decodethread.h"
 #include "debug.h"
 
@@ -16,6 +19,10 @@ Artificer::Artificer(const Archive &archive, const Indexer &indexer, Strategist 
         connect(_decodeThreads[i], SIGNAL(cancelled(DecodeThread *)),
                 SLOT(decodeThreadCancelled(DecodeThread *)));
     }
+
+    // Set up thread pool
+    debug()<<"Ideal threads:"<<QThread::idealThreadCount();
+    QThreadPool::globalInstance()->setMaxThreadCount(DECODE_THREADS);
 
     // Nothing requested
     _request0 = -1;
@@ -53,7 +60,7 @@ void Artificer::decodePages(int page0, int page1)
     for (i = 0; i < DECODE_THREADS; i++)
     {
         decoding = _decodeThreads[i]->currentPageNum();
-        debug()<<"Thread"<<i<<"on"<<decoding;
+        //debug()<<"Thread"<<i<<"on"<<decoding;
 
         if (decoding != -1)
         {
@@ -71,6 +78,7 @@ void Artificer::decodePages(int page0, int page1)
             else
             {
                 _decodeThreads[i]->cancel();
+                debug()<<"Cancel    "<<decoding;
             }
         }
     }
@@ -93,7 +101,7 @@ void Artificer::decodePages(int page0, int page1)
         }
     }
 
-    debug()<<"Queued"<<_request0<<_request1;
+    //debug()<<"Queued"<<_request0<<_request1;
 }
 
 /**
@@ -127,7 +135,7 @@ void Artificer::decodeThreadDone(DecodeThread *decodeThread, int index, QImage i
 void Artificer::decodeThreadCancelled(DecodeThread *decodeThread)
 {
     // Cancelled
-    debug()<<"Cancelled"<<decodeThread->currentPageNum();
+    debug()<<"Cancelled";
 
     // Start a new decode if needed
     if (decodeThread->currentPageNum() == -1)

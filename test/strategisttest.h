@@ -18,6 +18,7 @@ private slots:
     void simple();
     void zoom();
     void metrics();
+    void partialInfo();
 
 private:
     Book _book;

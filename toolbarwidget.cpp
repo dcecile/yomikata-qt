@@ -196,7 +196,7 @@ QPushButton *ToolbarWidget::makeButton(const QString &text)
 
 void ToolbarWidget::pageChanged(int page, int total)
 {
-    qDebug()<<"Page changed"<<page<<total;
+    //qDebug()<<"Page changed"<<page<<total;
 
     // Update the label
     _page->setEnabled(true);

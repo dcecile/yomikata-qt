@@ -66,7 +66,7 @@ void DecodeThread::cancel()
 
 void DecodeThread::decodeFinished()
 {
-    debug()<<"Decoded"<<_pageNum<<"--"<<_time.elapsed()<<"ms";
+    //debug()<<"Decoded"<<_pageNum<<"--"<<_time.elapsed()<<"ms";
 
     Q_ASSERT(_pageNum != -1);
     int finishedPage = _pageNum;
@@ -142,7 +142,7 @@ void DecodeThread::decode(int index)
 
     Q_ASSERT(_pageNum == -1);
     _pageNum = index;
-    debug()<<"Decoding"<<_pageNum;
+    //debug()<<"Decoding"<<_pageNum;
 
     Q_ASSERT(_imageSource == NULL);
     Q_ASSERT(_extracter == NULL);
@@ -189,16 +189,17 @@ void DecodeThread::decode(int index)
     {
         // Retrieve the size
         QSize fullSize = _imageReader.size();
-        debug()<<fullSize;
         Q_ASSERT(fullSize.isValid());
+        debug()<<"Found     "<<_pageNum<<fullSize;
 
         // Save the size
         _strategist.setFullPageSize(_pageNum, fullSize);
     }
 
     // Set up scaling
-    _imageReader.setScaledSize(
-        _strategist.pageLayout(_pageNum).size());
+    QSize layout = _strategist.pageLayout(_pageNum).size();
+    _imageReader.setScaledSize(layout);
+    debug()<<"Layout    "<<_pageNum<<layout;
 
     // Start decoding the image
     _decodeFuture = QtConcurrent::run(

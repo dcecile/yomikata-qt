@@ -11,6 +11,13 @@
     } \
     while (0)
 
+#define RESET(page) \
+    do \
+    { \
+        _strategist.reset(); \
+    } \
+    while (0)
+
 #define FIT(page, x, y, w, h) \
     do \
     { \
@@ -28,10 +35,17 @@
 #define METRICS(x0, y0, w0, h0, x1, y1, w1, h1, slackW, slackH) \
     do \
     { \
-        DisplayMetrics temp = _strategist.pageLayout();\
+        DisplayMetrics temp = _strategist.pageLayout(); \
         QCOMPARE(temp.pages[0], QRect((x0), (y0), (w0), (h0))); \
         QCOMPARE(temp.pages[1], QRect((x1), (y1), (w1), (h1))); \
         QCOMPARE(temp.slack, QSize((slackW), (slackH))); \
+    } \
+    while (0)
+
+#define UNKNOWN(page) \
+    do \
+    { \
+        QCOMPARE(_strategist.isFullPageSizeKnown((page)), false); \
     } \
     while (0)
 
@@ -156,6 +170,52 @@ void StrategistTest::metrics()
     SET(0, 165, 200);
     SET(1, 165, 200);
     METRICS(82, 0, 82, 100, 0, 0, 82, 100, 64, 50);
+}
+
+void StrategistTest::partialInfo()
+{
+    _strategist.setViewport(QSize(80, 50), QSize(80, 50));
+
+    // Hard-coded case
+    RESET();
+    SET(0, 934, 1500);
+    SET(1, 934, 1500);
+    FIT(0, 40, 0, 31, 50);
+    FIT(1, 9, 0, 31, 50);
+    RESET();
+    UNKNOWN(0);
+    UNKNOWN(1);
+    SET(0, 934, 1500);
+    FIT(0, 40, 0, 31, 50);
+    UNKNOWN(1);
+    SET(1, 934, 1500);
+    FIT(1, 9, 0, 31, 50);
+
+    // Positioning case
+    RESET();
+    SET(0, 60, 100);
+    SET(1, 60, 100);
+    FIT(0, 40, 0, 30, 50);
+    FIT(1, 10, 0, 30, 50);
+    RESET();
+    SET(0, 60, 100);
+    UNKNOWN(1);
+    FIT(0, 40, 0, 30, 50);
+    SET(1, 60, 100);
+    FIT(1, 10, 0, 30, 50);
+
+    // Resizing case
+    RESET();
+    SET(0, 90, 100);
+    SET(1, 90, 100);
+    FIT(0, 40, 3, 40, 44);
+    FIT(1, 0, 3, 40, 44);
+    RESET();
+    SET(0, 90, 100);
+    UNKNOWN(1);
+    FIT(0, 40, 3, 40, 44);
+    SET(1, 90, 100);
+    FIT(1, 0, 3, 40, 44);
 }
 
 #include "strategisttest.moc"

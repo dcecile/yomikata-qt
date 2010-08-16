@@ -116,7 +116,7 @@ void Book::previous()
 void Book::setPage(int page)
 {
     Q_ASSERT(0 <= page && page < _numPages);
-    qDebug()<<"Start"<<page<<_page0<<_page1;
+    //qDebug()<<"Start"<<page<<_page0<<_page1;
 
     // Go forward while the target is after the first and not at the second
     while (page > _page0 && page != _page1)
@@ -131,7 +131,7 @@ void Book::setPage(int page)
     }
 
     // Should be at the target now
-    qDebug()<<"End"<<page<<_page0<<_page1;
+    //qDebug()<<"End"<<page<<_page0<<_page1;
     Q_ASSERT(_page0 == page || _page1 == page);
 
     // Notify changed

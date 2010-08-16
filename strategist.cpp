@@ -85,26 +85,31 @@ QRect Strategist::pageLayout(int index)
 
 DisplayMetrics Strategist::pageLayout(int page0, int page1)
 {
-    // Retrieve the full size
-    QSize fullSize0 = _fullSizes[page0];
-
-    // Check if it was found
-    if (!fullSize0.isValid())
-    {
-        fullSize0 = QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    }
-
     // Two pages
     if (page1 >= 0)
     {
-        // Retrieve the full size
+        // Try to retrieve the full sizes
+        QSize fullSize0 = _fullSizes[page0];
         QSize fullSize1 = _fullSizes[page1];
 
-        // Check if it was found
-        if (!fullSize1.isValid())
+        if (!fullSize0.isValid() && !fullSize1.isValid())
         {
+            fullSize0 = QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
             fullSize1 = QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
         }
+        else if (!fullSize0.isValid())
+        {
+            fullSize0 = fullSize1;
+        }
+        else if (!fullSize1.isValid())
+        {
+            fullSize1 = fullSize0;
+        }
+
+        // Two-page unknown mirroring craveat: Should work without a hitch for
+        // landscape if there's enough room. If portrait, and page sizes aren't
+        // uniform, then the mirroring doesn't help much. Crazy heuristics won't
+        // help, only decoding both pages in lockstep will help.
 
         // Calculate layout for both pages
         return layOutPages(fullSize0, fullSize1);
@@ -112,6 +117,14 @@ DisplayMetrics Strategist::pageLayout(int page0, int page1)
     // One page
     else
     {
+        // Try to retrieve the full size
+        QSize fullSize0 = _fullSizes[page0];
+
+        if (!fullSize0.isValid())
+        {
+            fullSize0 = QSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        }
+
         // Calculate layout for the page
         return layOutPage(fullSize0);
     }

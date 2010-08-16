@@ -154,7 +154,7 @@ void Steward::decodeDone(int index, QPixmap page)
         // Or try decoding again, if needed
         else
         {
-            debug()<<"Wrong size"<<index;
+            debug()<<"Wrong size"<<index<<page.size();
             _artificer.decodePages(current0, current1);
         }
     }
