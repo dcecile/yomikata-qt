@@ -3,8 +3,6 @@
 
 #include <QObject>
 
-#include <QMutex>
-
 #include "book.h"
 
 /**
@@ -35,7 +33,6 @@ private slots:
     void persistentShiftedParity();
 
 private:
-    QMutex _lock;
     Book _book;
 };
 

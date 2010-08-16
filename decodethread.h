@@ -1,19 +1,22 @@
 #ifndef DECODETHREAD_H
 #define DECODETHREAD_H
 
-#include <QThread>
+#include <QObject>
 
 #include <QImage>
-#include <QMutex>
-#include <QWaitCondition>
+#include <QTime>
 #include <QStringList>
+#include <QFutureWatcher>
+#include <QImageReader>
+
+class QProcess;
 
 class Archive;
 class Indexer;
 class Strategist;
 class ImageSource;
 
-class DecodeThread : public QThread
+class DecodeThread : public QObject
 {
     Q_OBJECT
 
@@ -31,32 +34,32 @@ signals:
     void done(DecodeThread *decodeThread, int index, QImage image);
     void cancelled(DecodeThread *decodeThread);
 
-private:
-    void run();
-    void setExtractCommand();
-    void decode();
+private slots:
+    void decodeFinished();
 
 private:
-    static const int CANCELLED_POLLING = 50;
-    static const int KILL_WAIT = 50;
+    void setExtractCommand();
+    void decode();
 
 private:
     const Archive &_archive;
     const Indexer &_indexer;
     Strategist &_strategist;
 
-    QMutex _requestLock;
-    QMutex _cancelLock;
-    QWaitCondition _decodeRequest;
-    volatile bool _aborted;
-    volatile bool _reset;
-    volatile int _requestPageNum;
+    bool _aborted;
+    bool _reset;
+    int _requestPageNum;
+    bool _cancelled;
 
-    volatile int _pageNum;
+    QImageReader _imageReader;
+    QFutureWatcher<QImage> _decodeWatcher;
+    QFuture<QImage> _decodeFuture;
+    QTime _time;
+
+    int _pageNum;
+
+    QProcess *_extracter;
     ImageSource *_imageSource;
-    QImage _image;
-
-    volatile bool _cancelled;
 
     QString _command;
     QStringList _args;

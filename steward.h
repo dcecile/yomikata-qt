@@ -4,7 +4,6 @@
 #include <QObject>
 
 #include <QPixmap>
-#include <QMutex>
 
 class Book;
 class Archive;
@@ -55,7 +54,6 @@ private:
     void loadPages();
 
 private:
-    QMutex _lock;
     Book &_book;
     Archive &_archive;
     Indexer &_indexer;

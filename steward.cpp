@@ -12,11 +12,10 @@
 
 Steward::Steward(QObject *parent)
     : QObject(parent),
-    _lock(QMutex::Recursive),
-    _book(*new Book(_lock, this)),
+    _book(*new Book(this)),
     _archive(*new Archive(this)),
     _indexer(*new Indexer(_archive, this)),
-    _strategist(*new Strategist(_book, _lock, this)),
+    _strategist(*new Strategist(_book, this)),
     _artificer(*new Artificer(_archive, _indexer, _strategist, this)),
     _projector(*new Projector(NULL))
 {

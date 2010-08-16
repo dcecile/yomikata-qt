@@ -3,8 +3,6 @@
 
 #include <QObject>
 
-#include <QMutex>
-
 #include "book.h"
 #include "strategist.h"
 
@@ -22,7 +20,6 @@ private slots:
     void metrics();
 
 private:
-    QMutex _lock;
     Book _book;
     Strategist _strategist;
 };

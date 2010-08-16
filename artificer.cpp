@@ -15,7 +15,6 @@ Artificer::Artificer(const Archive &archive, const Indexer &indexer, Strategist 
                 SLOT(decodeThreadDone(DecodeThread*, int, QImage)));
         connect(_decodeThreads[i], SIGNAL(cancelled(DecodeThread *)),
                 SLOT(decodeThreadCancelled(DecodeThread *)));
-        _decodeThreads[i]->start();
     }
 
     // Nothing requested
@@ -54,6 +53,7 @@ void Artificer::decodePages(int page0, int page1)
     for (i = 0; i < DECODE_THREADS; i++)
     {
         decoding = _decodeThreads[i]->currentPageNum();
+        debug()<<"Thread"<<i<<"on"<<decoding;
 
         if (decoding != -1)
         {

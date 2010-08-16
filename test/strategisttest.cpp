@@ -36,7 +36,7 @@
     while (0)
 
 StrategistTest::StrategistTest(QObject *parent)
-    : QObject(parent), _lock(QMutex::Recursive), _book(_lock), _strategist(_book, _lock)
+    : QObject(parent),  _book(), _strategist(_book)
 {
     _book.reset(3);
     _strategist.reset();

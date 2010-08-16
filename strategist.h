@@ -20,7 +20,7 @@ class Strategist : public QObject
     Q_OBJECT
 
 public:
-    Strategist(Book &book, QMutex &lock, QObject *parent = NULL);
+    Strategist(Book &book, QObject *parent = NULL);
     ~Strategist();
 
     void reset();
@@ -48,7 +48,6 @@ private:
     DisplayMetrics layOutPage(QSize fullSize);
 
 private:
-    QMutex &_lock;
     Book &_book;
     QSize _viewport;
     QSize _visibleSize;

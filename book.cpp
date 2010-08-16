@@ -3,16 +3,14 @@
 #include <QDebug>
 #include <QMutex>
 
-Book::Book(QMutex &lock, QObject *parent)
-    : QObject(parent), _lock(lock)
+Book::Book(QObject *parent)
+    : QObject(parent)
 {
     reset(0);
 }
 
 void Book::reset(int numPages)
 {
-    QMutexLocker locker(&_lock);
-
     // Set the number of pages
     _numPages = numPages;
 
@@ -65,8 +63,6 @@ Book::~Book()
 
 void Book::next()
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(_page0 < _numPages - 1 && _page1 < _numPages - 1);
 
     // Go to the one after the second page
@@ -92,8 +88,6 @@ void Book::next()
 
 void Book::previous()
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(_page0 > 0);
 
     // Get the pair of the previous page
@@ -121,8 +115,6 @@ void Book::previous()
 
 void Book::setPage(int page)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(0 <= page && page < _numPages);
     qDebug()<<"Start"<<page<<_page0<<_page1;
 
@@ -154,8 +146,6 @@ void Book::setPage(int page)
  */
 void Book::shiftNext()
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(_page0 < _numPages - 1 && _page1 < _numPages - 1);
 
     bool shift = true;
@@ -258,8 +248,6 @@ void Book::shiftNext()
  */
 void Book::setDual(int page)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(page >= 0 && page < _numPages);
 
     int initialPage0 = _page0;
@@ -409,30 +397,22 @@ void Book::setDual(int page)
 
 bool Book::isDual(int page)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(page >= 0 && page < _numPages);
     return _info[page].dual;
 }
 
 int Book::page0()
 {
-    QMutexLocker locker(&_lock);
-
     return _page0;
 }
 
 int Book::page1()
 {
-    QMutexLocker locker(&_lock);
-
     return _page1;
 }
 
 int Book::pairedPage(int page)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(page >= 0 && page < _numPages);
 
     const Pair &pair = _info[page].pair;
@@ -453,8 +433,6 @@ int Book::pairedPage(int page)
 
 int Book::pairedPageOffset(int page)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(page >= 0 && page < _numPages);
 
     return (int) _info[page].pair;
@@ -462,22 +440,16 @@ int Book::pairedPageOffset(int page)
 
 int Book::numPages()
 {
-    QMutexLocker locker(&_lock);
-
     return _numPages;
 }
 
 bool Book::isNextEnabled()
 {
-    QMutexLocker locker(&_lock);
-
     return _page0 < _numPages - 1 && _page1 < _numPages - 1;
 }
 
 bool Book::isPreviousEnabled()
 {
-    QMutexLocker locker(&_lock);
-
     return _page0 > 0;
 }
 

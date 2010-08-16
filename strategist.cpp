@@ -13,8 +13,8 @@ const int Strategist::DEFAULT_WIDTH = 934;
 const int Strategist::DEFAULT_HEIGHT = 1500;
 const double Strategist::DUAL_PAGE_RATIO = 1.0;
 
-Strategist::Strategist(Book &book, QMutex &lock, QObject *parent)
-    : QObject(parent), _lock(lock), _book(book)
+Strategist::Strategist(Book &book, QObject *parent)
+    : QObject(parent), _book(book)
 {
     _numPages = 0;
 }
@@ -25,8 +25,6 @@ Strategist::~Strategist()
 
 void Strategist::reset()
 {
-    QMutexLocker locker(&_lock);
-
     _numPages = _book.numPages();
     _fullSizes.clear();
     _fullSizes.resize(_numPages);
@@ -34,8 +32,6 @@ void Strategist::reset()
 
 DisplayMetrics Strategist::pageLayout()
 {
-    QMutexLocker locker(&_lock);
-
     // Invalid viewport size means the widget is not set up
     if (!_viewport.isValid())
     {
@@ -50,8 +46,6 @@ DisplayMetrics Strategist::pageLayout()
 
 QRect Strategist::pageLayout(int index)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(index >= 0 && index < _numPages);
 
     // Invalid viewport size means the widget is not set up
@@ -245,8 +239,6 @@ DisplayMetrics Strategist::layOutPage(QSize fullSize)
 
 bool Strategist::isFullPageSizeKnown(int index)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(index >= 0 && index < _numPages);
 
     return _fullSizes[index].isValid();
@@ -257,8 +249,6 @@ bool Strategist::isFullPageSizeKnown(int index)
  */
 void Strategist::setFullPageSize(int index, QSize size)
 {
-    QMutexLocker locker(&_lock);
-
     Q_ASSERT(index >= 0 && index < _numPages);
 
     _fullSizes[index] = size;
@@ -275,7 +265,6 @@ void Strategist::setFullPageSize(int index, QSize size)
 
 void Strategist::setViewport(const QSize &fullSize, const QSize &viewSize)
 {
-    QMutexLocker locker(&_lock);
     _viewport = fullSize;
     _visibleSize = viewSize;
 }

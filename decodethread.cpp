@@ -1,7 +1,6 @@
 #include "decodethread.h"
 
 #include <QFileInfo>
-#include <QTime>
 #include <QProcess>
 #include <QImageReader>
 #include <QTextCodec>
@@ -16,32 +15,26 @@
 #include "imagesource.h"
 
 DecodeThread::DecodeThread(const Archive &archive, const Indexer &indexer, Strategist &strategist, QObject *parent)
-    : QThread(parent), _archive(archive), _indexer(indexer), _strategist(strategist)
+    : QObject(parent), _archive(archive), _indexer(indexer), _strategist(strategist)
 {
     _pageNum = -1;
     _requestPageNum = -1;
     _aborted = false;
     _imageSource = NULL;
+    _extracter = NULL;
 
     QTemporaryFile file;
     file.setAutoRemove(false);
     file.open();
     _temporaryFileName = file.fileName();
+
+    connect(&_decodeWatcher, SIGNAL(finished()), SLOT(decodeFinished()));
 }
 
 DecodeThread::~DecodeThread()
 {
     // Cancel any decode
     cancel();
-
-    // Create an abort request
-    _requestLock.lock();
-    _aborted = true;
-    _decodeRequest.wakeAll();
-    _requestLock.unlock();
-
-    // Wait for the thread to finish
-    wait();
 
     // Remove the temporary file
     QFile(_temporaryFileName).remove();
@@ -53,157 +46,52 @@ void DecodeThread::reset()
 {
     // Cancel any decode
     cancel();
-
-    // Make the next request reset
-    QMutexLocker locker(&_requestLock);
-    _reset = true;
-}
-
-/**
- * @todo Find out how to prevent queuing
- */
-void DecodeThread::decode(int index)
-{
-    if (_requestLock.tryLock())
-    {
-        _requestLock.unlock();
-    }
-    else
-    {
-        debug()<<"decode blocked";
-    }
-
-    QMutexLocker locker(&_requestLock);
-
-    // Assert no current decode
-    Q_ASSERT(_pageNum == -1);
-
-    // Create a request
-    _requestPageNum = index;
-    _decodeRequest.wakeAll();
 }
 
 int DecodeThread::currentPageNum()
 {
-    if (_requestLock.tryLock())
-    {
-        _requestLock.unlock();
-    }
-    else
-    {
-        debug()<<"currentPageNum blocked";
-    }
-
-    QMutexLocker locker(&_requestLock);
     return _pageNum;
 }
 
 void DecodeThread::cancel()
 {
-    if (_cancelLock.tryLock())
-    {
-        _cancelLock.unlock();
-    }
-    else
-    {
-        debug()<<"cancel blocked";
-    }
-
-    QMutexLocker locker(&_cancelLock);
-
-    // Set the cancelled flag
+    // Stop the image decode if it's running
     _cancelled = true;
 
-    // Stop the image decode if it's running
     if (_imageSource != NULL)
     {
         _imageSource->close();
     }
 }
 
-void DecodeThread::run()
+void DecodeThread::decodeFinished()
 {
-    // Available for requests, no current page
+    debug()<<"Decoded"<<_pageNum<<"--"<<_time.elapsed()<<"ms";
+
+    Q_ASSERT(_pageNum != -1);
+    int finishedPage = _pageNum;
     _pageNum = -1;
 
-    while (true)
+    Q_ASSERT(_imageSource != NULL);
+    delete _imageSource;
+    _imageSource = NULL;
+
+    Q_ASSERT(_extracter != NULL);
+    delete _extracter;
+    _extracter = NULL;
+
+    // Give notification
+    if (!_cancelled)
     {
-        // Get the next request
-        {
-            QMutexLocker locker(&_requestLock);
-
-            // Check if aborted during last decode
-            if (_aborted)
-            {
-                return;
-            }
-
-            // Wait if no queued request
-            if (_requestPageNum == -1)
-            {
-                _decodeRequest.wait(&_requestLock);
-            }
-
-            // Stop if aborted while waiting
-            if (_aborted)
-            {
-                return;
-            }
-
-            // Reload the command if reset
-            if (_reset)
-            {
-                setExtractCommand();
-                _reset = false;
-            }
-
-            // Set the page number
-            _pageNum = _requestPageNum;
-            _requestPageNum = -1;
-
-            // Done getting request parameters
-        }
-
-        // Not cancelled
-        _cancelled = false;
-
-        // Wait to see if cancelled
-        QTime clock;
-        clock.start();
-
-        for (int i = 0; i < 500 && !_cancelled; i += 10)
-        {
-            //msleep(10);
-        }
-
-        if (!_cancelled)
-        {
-            // Start the decode
-            decode();
-        }
-        else
-        {
-            debug()<<"Cancelled before started after"<<clock.elapsed()<<"ms";
-        }
-
-        // Available for requests, no current page
-        int lastPage = _pageNum;
-        {
-            QMutexLocker locker(&_requestLock);
-            _pageNum = -1;
-        }
-
-        // Give notification
-        if (!_cancelled)
-        {
-            // Done
-            emit done(this, lastPage, _image);
-        }
-        else
-        {
-            // Cancelled
-            emit cancelled(this);
-        }
+        // Done, assert the decode was okay
+        QImage image = _decodeFuture.result();
+        Q_ASSERT(!image.isNull());
+        emit done(this, finishedPage, image);
+    }
+    else
+    {
+        // Cancelled
+        emit cancelled(this);
     }
 }
 
@@ -248,12 +136,20 @@ void DecodeThread::setExtractCommand()
 /**
  * @todo Really cancel the extracter if this decode isn't needed.
  */
-void DecodeThread::decode()
+void DecodeThread::decode(int index)
 {
-    //debug()<<"start"<<_page->getPageNumber();
+    _cancelled = false;
 
-    QTime time;
-    time.start();
+    Q_ASSERT(_pageNum == -1);
+    _pageNum = index;
+    debug()<<"Decoding"<<_pageNum;
+
+    Q_ASSERT(_imageSource == NULL);
+    Q_ASSERT(_extracter == NULL);
+
+    setExtractCommand();
+
+    _time.start();
 
     // Choose a format for the filename argument
     QByteArray pageName = _indexer.pageName(_pageNum);
@@ -275,32 +171,25 @@ void DecodeThread::decode()
     }
 
     // Start the extracter
-    //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
-    QTime clock;
-    clock.start();
-
-    QProcess extracter;
+    _extracter = new QProcess;
     QStringList args = _args + QStringList(nameArgument);
-    extracter.start(_command, args);
+    _extracter->start(_command, args);
+    //debug()<<"Starting"<<_command<<_args + QStringList(nameArgument);
 
     // Set up blocking-IO cancellable proxy
-    ImageSource source(&extracter);
-
-    // Prepare to allow source cancels
-    {
-        QMutexLocker locker(&_cancelLock);
-        _imageSource = &source;
-    }
+    _extracter->waitForFinished();
+    _imageSource = new ImageSource(_extracter);
 
     // Set up the image reader
-    QImageReader imageReader(
-        &source,
+    _imageReader.setDevice(_imageSource);
+    _imageReader.setFormat(
         QFileInfo(pageName).suffix().toLower().toLatin1());
 
     if (!_strategist.isFullPageSizeKnown(_pageNum))
     {
         // Retrieve the size
-        QSize fullSize = imageReader.size();
+        QSize fullSize = _imageReader.size();
+        debug()<<fullSize;
         Q_ASSERT(fullSize.isValid());
 
         // Save the size
@@ -308,25 +197,13 @@ void DecodeThread::decode()
     }
 
     // Set up scaling
-    imageReader.setScaledSize(
+    _imageReader.setScaledSize(
         _strategist.pageLayout(_pageNum).size());
 
-    // Decode the image
-    QFuture<QImage> imageFuture = QtConcurrent::run(
-        &imageReader, &QImageReader::read);
-    _image = imageFuture.result();
-
-    // Disallow source cancels
-    {
-        QMutexLocker locker(&_cancelLock);
-        _imageSource = NULL;
-    }
-
-    // Assert the decode was okay unless cancelled
-    Q_ASSERT(_cancelled || !_image.isNull());
-    //debug()<<"Decode"<<clock.elapsed();
-
-    debug()<<"Decoded"<<_pageNum<<"--"<<time.elapsed()<<"ms";
+    // Start decoding the image
+    _decodeFuture = QtConcurrent::run(
+        &_imageReader, &QImageReader::read);
+    _decodeWatcher.setFuture(_decodeFuture);
 }
 
 #include "decodethread.moc"

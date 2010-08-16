@@ -5,8 +5,6 @@
 
 #include <vector>
 
-class QMutex;
-
 using std::vector;
 
 /**
@@ -47,7 +45,7 @@ class Book : public QObject
     Q_OBJECT
 
 public:
-    Book(QMutex &lock, QObject *parent = NULL);
+    Book(QObject *parent = NULL);
     ~Book();
 
     void reset(int numPages);
@@ -84,7 +82,6 @@ private:
     };
 
 private:
-    QMutex &_lock;
     int _numPages;
     vector<Info> _info;
     int _page0;
