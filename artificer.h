@@ -6,9 +6,9 @@
 #include <QPixmap>
 
 class Archive;
+class Decoder;
 class Indexer;
 class Strategist;
-class DecodeThread;
 
 class Artificer : public QObject
 {
@@ -26,16 +26,22 @@ signals:
     void pageDecoded(int index, QPixmap pixmap);
 
 private slots:
-    void decodeThreadDone(DecodeThread *decodeThread, int index, QImage image);
-    void decodeThreadCancelled(DecodeThread *decodeThread);
+    void decoderDone(Decoder *decoder, int index, QPixmap pixmap);
+    void decoderCancelled(Decoder *decoder);
 
 private:
-    static const int DECODE_THREADS = 2;
+    void decodePages(QList<int> pages);
 
 private:
-    DecodeThread *_decodeThreads[DECODE_THREADS];
-    int _request0;
-    int _request1;
+    static const int DECODE_THREADS = 8;
+
+private:
+    const Archive &_archive;
+    const Indexer &_indexer;
+    Strategist &_strategist;
+
+    QList<Decoder *> _running;
+    QList<Decoder *> _cancelled;
 };
 
 #endif

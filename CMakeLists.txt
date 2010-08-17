@@ -18,7 +18,7 @@ set(yomikata_SRCS
 
     archivelister.cpp
     fileclassification.cpp
-    decodethread.cpp
+    decoder.cpp
     imagesource.cpp
 
     scroller.cpp

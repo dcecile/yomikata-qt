@@ -39,6 +39,9 @@ private:
     void updateFromProxy(qint64 targetSize);
 
 private:
+    static const int WAIT_TIMEOUT = 500;
+
+private:
     QMutex _lock;
     QIODevice *_proxy;
     QTime _clock;

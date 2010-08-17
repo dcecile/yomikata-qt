@@ -39,7 +39,7 @@ void ImageSource::updateFromProxy(qint64 targetSize)
 
     while (waited && (targetSize - _buffer.size() > 0))
     {
-        waited = _proxy->waitForReadyRead(-1);
+        waited = _proxy->waitForReadyRead(WAIT_TIMEOUT);
         _buffer.buffer() += _proxy->readAll();
     }
 }
