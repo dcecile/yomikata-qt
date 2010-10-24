@@ -26,7 +26,8 @@ public:
     void reset();
 
     int numPages() const;
-    QByteArray pageName(int indexer) const;
+    QByteArray pageName(int index) const;
+    int uncompressedSize(int index) const;
 
 signals:
     void built();

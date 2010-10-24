@@ -24,8 +24,11 @@ Decoder::~Decoder()
     cancel();
 
     // Wait for the decode to finish
+    _measureFuture.waitForFinished();
     _decodeFuture.waitForFinished();
 
+    delete _imageSource;
+    delete _extracter;
     //debug()<<"~Decoder()";
 }
 
@@ -38,11 +41,10 @@ void Decoder::cancel()
 {
     _cancelled = true;
 
+    debug()<<"Cancelling"<<_pageNum;
+
     // Prevent image decoding
-    if (_imageSource != NULL)
-    {
-        _imageSource->close();
-    }
+    _imageSource->close();
 
     // Stop the extracter process
     //debug()<<"Terminating extracter process after"<<_time.elapsed()<<"ms";
@@ -59,29 +61,6 @@ void Decoder::cancel()
             debug()<<"Killing extracter process";
             _extracter->kill();
         }
-    }
-}
-
-void Decoder::decodeFinished()
-{
-    //debug()<<"Decoded"<<_pageNum<<"--"<<_time.elapsed()<<"ms";
-
-    // Give notification
-    if (!_cancelled)
-    {
-        // Done, assert the decode was okay
-        QImage image = _decodeFuture.result();
-        Q_ASSERT(!image.isNull());
-
-        // Conver the image to a pixmap
-        QPixmap pixmap(QPixmap::fromImage(image));
-
-        emit done(this, _pageNum, pixmap);
-    }
-    else
-    {
-        // Cancelled
-        emit cancelled(this);
     }
 }
 
@@ -144,20 +123,18 @@ void Decoder::startExtracter(
 {
     QString command = archive.programPath();
     QStringList args = chooseExtracterArguments(archive, pageFilename);
-    _extracter = new QProcess(this);
+    _extracter = new QProcess();
     _extracter->start(command, args);
     //debug()<<"Starting"<<command<<args;
 }
 
-void Decoder::makeImageSource()
+void Decoder::makeImageSource(int uncompressedSize)
 {
     // Set up blocking-IO cancellable proxy
-    _imageSource = new ImageSource(_extracter, this);
+    _imageSource = new ImageSource(_extracter, uncompressedSize);
 }
 
-void Decoder::setUpImageReader(
-    const QByteArray &pageFilename,
-    Strategist &strategist)
+void Decoder::setUpImageReader(const QByteArray &pageFilename)
 {
     _imageReader.setDevice(_imageSource);
 
@@ -167,25 +144,59 @@ void Decoder::setUpImageReader(
             .toLower()
             .toLatin1());
 
-    if (!strategist.isFullPageSizeKnown(_pageNum))
+    if (!_strategist->isFullPageSizeKnown(_pageNum))
+    {
+        startMeasuring();
+    }
+    else
+    {
+        startDecoding();
+    }
+}
+
+void Decoder::startMeasuring()
+{
+    // Create the future watcher
+    QFutureWatcher<QSize> *measureWatcher = new QFutureWatcher<QSize>(this);
+    connect(measureWatcher, SIGNAL(finished()), SLOT(measureFinished()));
+
+    // Start the future
+    _measureFuture = QtConcurrent::run(
+        &_imageReader, &QImageReader::size);
+
+    // Subscribe to the future finishing
+    measureWatcher->setFuture(_measureFuture);
+}
+
+void Decoder::measureFinished()
+{
+    if (!_cancelled)
     {
         // Retrieve the full image size
-        QSize fullSize = _imageReader.size();
+        QSize fullSize = _measureFuture.result();
         Q_ASSERT(fullSize.isValid());
         debug()<<"Found     "<<_pageNum<<fullSize;
 
         // Save it
-        strategist.setFullPageSize(_pageNum, fullSize);
-    }
+        _strategist->setFullPageSize(_pageNum, fullSize);
 
-    // Set up scaling
-    QSize layout = strategist.pageLayout(_pageNum).size();
-    _imageReader.setScaledSize(layout);
-    debug()<<"Layout    "<<_pageNum<<layout;
+        // Start the decode
+        startDecoding();
+    }
+    else
+    {
+        // Cancelled
+        emit cancelled(this);
+    }
 }
 
 void Decoder::startDecoding()
 {
+    // Set up scaling
+    QSize layout = _strategist->pageLayout(_pageNum).size();
+    _imageReader.setScaledSize(layout);
+    debug()<<"Layout    "<<_pageNum<<layout;
+
     // Create the future watcher
     QFutureWatcher<QImage> *decodeWatcher = new QFutureWatcher<QImage>(this);
     connect(decodeWatcher, SIGNAL(finished()), SLOT(decodeFinished()));
@@ -198,24 +209,47 @@ void Decoder::startDecoding()
     decodeWatcher->setFuture(_decodeFuture);
 }
 
+void Decoder::decodeFinished()
+{
+    //debug()<<"Decoded"<<_pageNum<<"--"<<_time.elapsed()<<"ms";
+
+    // Give notification
+    if (!_cancelled)
+    {
+        // Done, assert the decode was okay
+        QImage image = _decodeFuture.result();
+        Q_ASSERT(!image.isNull());
+
+        // Conver the image to a pixmap
+        QPixmap pixmap(QPixmap::fromImage(image));
+
+        emit done(this, _pageNum, pixmap);
+    }
+    else
+    {
+        // Cancelled
+        emit cancelled(this);
+    }
+}
+
 void Decoder::decode(
     const Archive &archive,
     const Indexer &indexer,
     Strategist &strategist,
     int pageNum)
 {
+    _strategist = &strategist;
     _pageNum = pageNum;
     _time.start();
 
     QByteArray pageFilename = indexer.pageName(_pageNum); 
+    int uncompressedSize = indexer.uncompressedSize(_pageNum);
 
     startExtracter(archive, pageFilename);
 
-    makeImageSource();
+    makeImageSource(uncompressedSize);
 
-    setUpImageReader(pageFilename, strategist);
-
-    startDecoding();
+    setUpImageReader(pageFilename);
 }
 
 #include "decoder.moc"

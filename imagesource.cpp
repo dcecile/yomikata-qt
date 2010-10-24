@@ -1,8 +1,13 @@
 #include "imagesource.h"
 
+#include <QProcess>
+
 #include "debug.h"
 
-ImageSource::ImageSource(QIODevice *proxy, QObject *parent)
+// QProcess used from a non-owner thread, calling waitFoReadyRead is
+// very unreliable (causes exit 141, SIGPIPE). So, the data is pulled
+// from the proxy using signals, and an off-thread wait condition.
+ImageSource::ImageSource(QIODevice *proxy, int fullSize, QObject *parent)
     : QIODevice(parent)
 {
     _proxy = proxy;
@@ -10,7 +15,9 @@ ImageSource::ImageSource(QIODevice *proxy, QObject *parent)
     setOpenMode(ReadOnly);
     _buffer.setData(_proxy->readAll());
     _buffer.open(ReadOnly);
+    _fullSize = static_cast<qint64>(fullSize);
     _clock.start();
+    connect(_proxy, SIGNAL(readyRead()), SLOT(proxyReadyRead()));
 }
 
 ImageSource::~ImageSource()
@@ -24,30 +31,48 @@ bool ImageSource::isSequential() const
 
 void ImageSource::close()
 {
+    // Close this buffer and prevent new references (rely
+    // on the proxy to get closed by other means)
     QMutexLocker locker(&_lock);
-    //debug()<<"close";
-    _proxy->close();
     _buffer.close();
     QIODevice::close();
+    _ready.wakeOne();
 }
 
-void ImageSource::updateFromProxy(qint64 targetSize)
+void ImageSource::proxyReadyRead()
 {
-    bool waited = true;
+    QMutexLocker locker(&_lock);
 
-    //debug()<<targetSize<<_buffer.size();
+    _buffer.buffer() += _proxy->readAll();
+    _ready.wakeOne();
+}
 
-    while (waited && (targetSize - _buffer.size() > 0))
+void ImageSource::updateFromProxy()
+{
+    qint64 targetSize = qMin(pos() + 1, _fullSize);
+    bool problemWaiting = false;
+
+    while (!problemWaiting && _buffer.size() < targetSize)
     {
-        waited = _proxy->waitForReadyRead(WAIT_TIMEOUT);
-        _buffer.buffer() += _proxy->readAll();
+        problemWaiting =
+            !_ready.wait(&_lock, WAIT_TIMEOUT)
+            || !isReadable();
+    }
+
+    if (problemWaiting && _buffer.size() < targetSize && isReadable())
+    {
+        QProcess *process = (QProcess *) _proxy;
+        debug()<<"Problem!"<<process->exitCode()<<process->error()<<process->state()<<process->isReadable();//<<process->readAllStandardError();
     }
 }
 
 qint64 ImageSource::readData(char *data, qint64 maxSize)
 {
     QMutexLocker locker(&_lock);
-    updateFromProxy(pos() + maxSize);
+    if (isReadable())
+    {
+        updateFromProxy();
+    }
     int read = _buffer.read(data, maxSize);
     //debug()<<"Reading"<<read<<QString("(%1 ms)").arg(_clock.elapsed())<<isOpen();
     return read;
@@ -60,7 +85,7 @@ bool ImageSource::seek(qint64 pos)
     if (isReadable())
     {
         QIODevice::seek(pos);
-        updateFromProxy(pos + 1);
+        updateFromProxy();
         return _buffer.seek(pos);
     }
     else
@@ -72,6 +97,11 @@ bool ImageSource::seek(qint64 pos)
 qint64 ImageSource::pos() const
 {
     return _buffer.pos();
+}
+
+bool ImageSource::open(OpenMode mode)
+{
+    return mode == ReadOnly;
 }
 
 qint64 ImageSource::size() const
@@ -110,10 +140,10 @@ qint64 ImageSource::bytesAvailable() const
     return 0;
 }
 
-bool ImageSource::open(OpenMode mode)
+qint64 ImageSource::writeData(const char *data, qint64 maxSize)
 {
     Q_ASSERT(false);
-    return false;
+    return 0;
 }
 
 #include "imagesource.moc"

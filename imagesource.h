@@ -6,13 +6,14 @@
 #include <QBuffer>
 #include <QMutex>
 #include <QTime>
+#include <QWaitCondition>
 
 class ImageSource : public QIODevice
 {
     Q_OBJECT
 
 public:
-    ImageSource(QIODevice *proxy, QObject *parent = 0);
+    ImageSource(QIODevice *proxy, int fullSize, QObject *parent = 0);
     ~ImageSource();
 
     qint64 bytesAvailable() const;
@@ -33,19 +34,24 @@ public:
 
 protected:
     qint64 readData(char *data, qint64 maxSize);
-    qint64 writeData(const char *data, qint64 maxSize) { return 0; }
+    qint64 writeData(const char *data, qint64 maxSize);
+
+private slots:
+    void proxyReadyRead();
 
 private:
-    void updateFromProxy(qint64 targetSize);
+    void updateFromProxy();
 
 private:
-    static const int WAIT_TIMEOUT = 500;
+    static const int WAIT_TIMEOUT = 3000;
 
 private:
     QMutex _lock;
+    QWaitCondition _ready;
     QIODevice *_proxy;
     QTime _clock;
     QBuffer _buffer;
+    qint64 _fullSize;
 };
 
 #endif

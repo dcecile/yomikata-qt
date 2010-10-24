@@ -33,7 +33,7 @@ private:
     void decodePages(QList<int> pages);
 
 private:
-    static const int DECODE_THREADS = 8;
+    static const int DECODE_THREADS = 3;
 
 private:
     const Archive &_archive;

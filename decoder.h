@@ -41,6 +41,7 @@ signals:
     void cancelled(Decoder *decoder);
 
 private slots:
+    void measureFinished();
     void decodeFinished();
 
 private:
@@ -50,10 +51,9 @@ private:
     void startExtracter(
         const Archive &archive,
         const QByteArray &pageFilename);
-    void makeImageSource();
-    void setUpImageReader(
-        const QByteArray &pageFilename,
-        Strategist &strategist);
+    void makeImageSource(int uncompressedSize);
+    void setUpImageReader(const QByteArray &pageFilename);
+    void startMeasuring();
     void startDecoding();
 
 private:
@@ -62,6 +62,7 @@ private:
 private:
     bool _cancelled;
 
+    QFuture<QSize> _measureFuture;
     QFuture<QImage> _decodeFuture;
     QTime _time;
 
@@ -72,6 +73,8 @@ private:
     QImageReader _imageReader;
 
     QTemporaryFile _temporaryFile;
+
+    Strategist *_strategist;
 };
 
 #endif

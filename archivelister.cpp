@@ -1,5 +1,6 @@
 #include "archivelister.h"
 
+#include <QRegExp>
 #include <QTextCodec>
 
 #include "archive.h"
@@ -108,55 +109,51 @@ void ArchiveLister::start()
     _process.start(_archive.programPath(), args);
 }
 
-/**
- * @todo Extract size
- * @todo Only look at files
- * @todo File bug with Qt about QProcess argument text codecs, it only EVER uses the system codec
- */
 void ArchiveLister::sevenZipParser()
 {
-    QByteArray output = _process.readAllStandardOutput();
+    _currentInputLine.append(_process.readAllStandardOutput());
     int newLineIdx;
 
-    while ((newLineIdx = output.indexOf('\n')) != -1)
+    while ((newLineIdx = _currentInputLine.indexOf("\n\n")) != -1)
     {
-        // New line found
-        // Fill a full line of input, excluding the new line
-        _currentInputLine.append(output.left(newLineIdx));
+        sevenZipParserBlock(
+            _currentInputLine.left(newLineIdx));
+        _currentInputLine.remove(0, newLineIdx + 2);
+    }
+}
 
-        // Trim the full line
-        _currentInputLine = _currentInputLine.trimmed();
+void ArchiveLister::sevenZipParserBlock(const QByteArray &block)
+{
+    // Each line should have a "Key = Value" entry (store them in a map)
+    // (Note: the 7z prelude will simply not match this pattern)
+    QList<QByteArray> lines = block.split('\n');
+    QMap<QByteArray, QByteArray> attributes;
 
-        // Skip blank lines
-        if (_currentInputLine.length() == 0)
+    foreach (QByteArray line, lines)
+    {
+        int equals = line.indexOf(" = ");
+        if (equals != -1)
         {
-            // Skip this input
-            output = output.right(output.length() - (newLineIdx + 1));
-
-            // Don't process this line
-            continue;
+            attributes[line.left(equals)] = line.mid(equals + 3);
         }
-
-        // If path entry line
-        if (_currentInputLine.startsWith("Path = "))
-        {
-            // File name is remainder of the line
-            QByteArray filename = _currentInputLine.right(_currentInputLine.length() - 7);
-
-            // Only add if an image file
-            if (FileClassification::isImageFile(filename))
-            {
-                emit entryFound(filename, 0, 0);
-            }
-        }
-
-        // Start a new line of input, excluding the new line
-        _currentInputLine = "";
-        output = output.right(output.length() - (newLineIdx + 1));
     }
 
-    // No new line, keep constructing a full line
-    _currentInputLine.append(output);
+    // If this block is for a file (it has all of the attributes), go ahead
+    // and classify it as an archive entry
+    if (attributes.contains("Path")
+        && attributes.contains("Size")
+        && attributes.contains("Packed Size"))
+    {
+        const QByteArray &filename = attributes["Path"];
+
+        if (FileClassification::isImageFile(filename))
+        {
+            emit entryFound(
+                filename,
+                attributes["Packed Size"].toInt(),
+                attributes["Size"].toInt());
+        }
+    }
 }
 
 void ArchiveLister::defaultParser()

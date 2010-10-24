@@ -35,6 +35,7 @@ private slots:
     void defaultParser();
     void rarParserText();
     void sevenZipParser();
+    void sevenZipParserBlock(const QByteArray &block);
     void errorText();
     void error(QProcess::ProcessError error);
     void finished(int exitCode, QProcess::ExitStatus exitStatus);

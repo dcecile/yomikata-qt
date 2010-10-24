@@ -48,10 +48,16 @@ int Indexer::numPages() const
     return _files.size();
 }
 
-QByteArray Indexer::pageName(int indexer) const
+QByteArray Indexer::pageName(int index) const
 {
-    Q_ASSERT(indexer >= 0 && indexer < (int) _files.size());
-    return _files[indexer].name;
+    Q_ASSERT(index >= 0 && index < (int) _files.size());
+    return _files[index].name;
+}
+
+int Indexer::uncompressedSize(int index) const
+{
+    Q_ASSERT(index >= 0 && index < (int) _files.size());
+    return _files[index].uncompressedSize;
 }
 
 void Indexer::entryFound(const QByteArray &filename, int compressedSize, int uncompressedSize)
