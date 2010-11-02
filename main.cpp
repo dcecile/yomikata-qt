@@ -34,9 +34,9 @@ int application_main(int argc, char *argv[])
     // Initial argument
     QString arg = "";
 
-    if (argc >= 2)
+    if (QCoreApplication::arguments().size() >= 2)
     {
-        arg = argv[1];
+        arg = QCoreApplication::arguments()[1];
     }
 
     // Qt doesn't destory main windows automatically
