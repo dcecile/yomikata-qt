@@ -31,6 +31,7 @@ public:
     void paintView(QPainter *painter, const QRect &updateRect);
 
     void mouseMoved(const QPointF &pos);
+    void resetMouse();
 
 public slots:
     void next();

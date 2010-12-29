@@ -23,6 +23,7 @@ private:
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void leaveEvent(QEvent* event);
     int toolbarHeight() const;
 
 private:

@@ -220,6 +220,12 @@ void Steward::mouseMoved(const QPointF &pos)
     _projector.mouseMoved(pos);
 }
 
+void Steward::resetMouse()
+{
+    // Tell the projector about the mouse being reset
+    _projector.resetMouse();
+}
+
 /**
  * @todo Make robust
  */

@@ -77,6 +77,9 @@ void ViewWidget::mousePressEvent(QMouseEvent *event)
 
             // Show the toolbar
             _toolbar->startShow();
+
+            // Stop scrolling
+            _steward.resetMouse();
         }
         else
         {
@@ -138,6 +141,16 @@ void ViewWidget::mouseMoveEvent(QMouseEvent *event)
 
         // Tell the steward the mosue moved
         _steward.mouseMoved(pos);
+    }
+}
+
+void ViewWidget::leaveEvent(QEvent* event)
+{
+    // Ignore if using the toolbar
+    if (!_usingToolbar)
+    {
+        // Stop scrolling
+        _steward.resetMouse();
     }
 }
 

@@ -19,6 +19,7 @@ Scroller::Scroller(QObject *parent)
     _extent = QSizeF(0.0, 0.0);
     _velocity = QPointF(0.0, 0.0);
     _scrollPos = QPointF(0.0, 0.0);
+    _isReset = true;
 
     // Start the clocks
     _slideTime.start();
@@ -78,8 +79,9 @@ void Scroller::mouseMoved(const QPointF &pos)
     time = min(time, 20.0);
 
     // Find the distance
-    QPointF distance = _lastMousePos - pos;
+    QPointF distance = _isReset ? QPointF(0.0, 0.0) : _lastMousePos - pos;
     _lastMousePos = pos;
+    _isReset = false;
 
     // Calculate the force
     const double FORCE_FACTOR = -0.02;
@@ -93,7 +95,13 @@ void Scroller::mouseMoved(const QPointF &pos)
 
     // Enable refresh
     emit enableRefresh(!_velocity.isNull());
+}
 
+void Scroller::resetMouse()
+{
+    _isReset = true;
+    _velocity = QPointF(0.0, 0.0);
+    emit enableRefresh(false);
 }
 
 void Scroller::timeStep()

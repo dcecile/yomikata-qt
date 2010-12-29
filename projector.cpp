@@ -205,4 +205,9 @@ void Projector::mouseMoved(const QPointF &pos)
     _scroller.mouseMoved(pos);
 }
 
+void Projector::resetMouse()
+{
+    _scroller.resetMouse();
+}
+
 #include "projector.moc"

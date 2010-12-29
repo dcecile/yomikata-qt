@@ -23,6 +23,7 @@ public:
     QPoint position();
 
     void mouseMoved(const QPointF &pos);
+    void resetMouse();
 
 signals:
     void enableRefresh(bool enable);
@@ -32,6 +33,7 @@ private:
     void enforceBounds();
 
 private:
+    bool _isReset;
     QPointF _lastMousePos;
 
     QSizeF _extent;
