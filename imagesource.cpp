@@ -106,8 +106,7 @@ bool ImageSource::open(OpenMode mode)
 
 qint64 ImageSource::size() const
 {
-    Q_ASSERT(false);
-    return 0;
+    return _fullSize;
 }
 
 qint64 ImageSource::peek(char *data, qint64 maxSize)
