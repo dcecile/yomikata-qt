@@ -250,5 +250,3 @@ void ToolbarWidget::setShownHeight(int height)
         setContentsMargins(FRAME_WIDTH, FRAME_WIDTH + height - _fullHeight, FRAME_WIDTH, FRAME_WIDTH);
     }
 }
-
-#include "toolbarwidget.moc"

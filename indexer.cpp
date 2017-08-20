@@ -95,5 +95,3 @@ void Indexer::listingFinished()
 
     emit built();
 }
-
-#include "indexer.moc"

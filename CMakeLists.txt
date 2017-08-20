@@ -1,3 +1,7 @@
+# Minimum CMake version
+cmake_minimum_required(VERSION 3.9)
+
+# Project
 project(yomikata)
 
 # Source files
@@ -44,9 +48,6 @@ set(test_CLASSES
 # TODO add clean_doc and clean_lcov to the clean target
 # TODO enable warnings like KDE does
 
-# Minimum CMake version
-cmake_minimum_required(VERSION 2.6)
-
 # Options
 include(cmake/Options.cmake)
 
@@ -54,17 +55,15 @@ include(cmake/Options.cmake)
 include(cmake/Paths.cmake)
 
 # Qt-only dependency
-find_package(Qt4 REQUIRED)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt5 COMPONENTS Core Widgets Concurrent REQUIRED)
 if(UNIT_TESTING)
-    set(QT_USE_QTTEST 1)
+    find_package(Qt5Test REQUIRED)
 endif()
-include(${QT_USE_FILE})
-include_directories(${QT4_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR})
 
 # Windows 7zip
 if(WIN32)
     find_path(SEVENZIP_PATH "7z.exe")
-    
     if(DEV_MODE)
         add_definitions('-DWINDOWS_FIRST_PATH="${SEVENZIP_PATH}"')
     else()
@@ -96,7 +95,6 @@ endif()
 # Link flags
 if(WIN32 AND NOT UNIX)
     # Don't open a console in windows
-    message("test")
     set(LINK_FLAGS "${LINK_FLAGS} -mwindows")
 endif()
 
@@ -105,10 +103,10 @@ if(WIN32)
   if(MINGW)
     # resource compilation for mingw
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o
-                       DEPENDS icon.rc
-                       COMMAND windres.exe -I${CMAKE_CURRENT_SOURCE_DIR}
-                                           -i${CMAKE_CURRENT_SOURCE_DIR}/icon.rc
-                                           -o ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o)
+        DEPENDS icon.rc
+        COMMAND windres.exe -I${CMAKE_CURRENT_SOURCE_DIR}
+            -i${CMAKE_CURRENT_SOURCE_DIR}/icon.rc
+            -o ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o)
     set(yomikata_SRCS ${yomikata_SRCS} ${CMAKE_CURRENT_BINARY_DIR}/icon_rc.o)
   else()
     set(yomikata_SRCS ${yomikata_SRCS} icon.rc)
@@ -116,13 +114,11 @@ if(WIN32)
 endif()
 
 # Qt build steps
-qt4_automoc(${yomikata_SRCS})
-qt4_add_resources(yomikata_SRCS yomikata.qrc)
 add_executable(yomikata ${yomikata_SRCS})
-target_link_libraries(yomikata ${QT_LIBRARIES} ${COVERAGE_LIBRARY})
-    if(CODE_COVERAGE)
-        set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
-    endif()
+target_link_libraries(yomikata Qt5::Core Qt5::Widgets Qt5::Concurrent ${COVERAGE_LIBRARY})
+if(CODE_COVERAGE)
+    set_target_properties(yomikata PROPERTIES COMPILE_FLAGS ${COVERAGE_FLAGS})
+endif()
 
 # Set flags
 set_target_properties(yomikata PROPERTIES LINK_FLAGS "${CXX_FLAGS} ${LINK_FLAGS}")
@@ -146,7 +142,7 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "Yomikata")
 set(CPACK_PACKAGE_EXECUTABLES "yomikata" "Yomikata")
 
 if(WIN32 AND NOT UNIX)
-        set(CPACK_NSIS_MODIFY_PATH OFF)
+    set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_PACKAGE_FILE_NAME "yomikata-setup")
     set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/icon\\\\icon.ico")
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/icon\\\\uninstall.ico")

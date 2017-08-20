@@ -452,5 +452,3 @@ bool Book::isPreviousEnabled()
 {
     return _page0 > 0;
 }
-
-#include "book.moc"

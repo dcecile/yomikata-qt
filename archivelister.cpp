@@ -381,7 +381,7 @@ QString ArchiveLister::cleanZipFilename(const QString &filename)
         //debug()<<"Is letter / number "<<fixed[j].isLetterOrNumber();
         if (!fixed[j].isLetterOrNumber())
         {
-            const char ascii = fixed[j].toAscii();
+            const char ascii = fixed[j].toLatin1();
             //debug()<<"Char"<<j<<fixed[j]<<"-"<<int((unsigned char)ascii);
             if (ascii == 0 || !(ascii == ' ' || ascii == '_' || ascii == '/' || ascii == '.'))
             {
@@ -392,5 +392,3 @@ QString ArchiveLister::cleanZipFilename(const QString &filename)
 
     return fixed;
 }
-
-#include "archivelister.moc"

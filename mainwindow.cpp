@@ -215,5 +215,3 @@ void MainWindow::fullscreen(bool toggled)
         showNormal();
     }
 }
-
-#include "mainwindow.moc"

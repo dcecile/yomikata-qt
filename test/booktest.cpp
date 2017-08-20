@@ -775,5 +775,3 @@ void BookTest::persistentShiftedParity()
     PAIRED(8, -1);
     PAIRED(9, 10);
 }
-
-#include "booktest.moc"

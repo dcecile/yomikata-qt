@@ -286,5 +286,3 @@ const QString &Archive::programPath() const
 {
     return _programPaths[_type];
 }
-
-#include "archive.moc"

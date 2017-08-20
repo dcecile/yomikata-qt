@@ -109,5 +109,3 @@ void Artificer::decoderCancelled(Decoder *decoder)
     delete decoder;
     Q_ASSERT(removed);
 }
-
-#include "artificer.moc"

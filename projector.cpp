@@ -2,7 +2,7 @@
 
 #include <QPalette>
 #include <QPainter>
-#include <QApplication>
+#include <QGuiApplication>
 
 #include "debug.h"
 #include "displaymetrics.h"
@@ -182,8 +182,7 @@ void Projector::paint(QPainter *painter, const QRect &updateRect)
 void Projector::refresh()
 {
     // Pump the events, to make sure input gets handled
-    QApplication::syncX();
-    QApplication::processEvents();
+    QGuiApplication::sync();
 
     // Repaint immediately
     emit repaint();
@@ -209,5 +208,3 @@ void Projector::resetMouse()
 {
     _scroller.resetMouse();
 }
-
-#include "projector.moc"

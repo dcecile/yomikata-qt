@@ -136,7 +136,7 @@ void ViewWidget::mouseMoveEvent(QMouseEvent *event)
     if (!_usingToolbar)
     {
         // Offset by toolbar height
-        QPointF pos = event->posF();
+        QPointF pos = event->localPos();
         pos.ry() += toolbarHeight();
 
         // Tell the steward the mosue moved
@@ -153,5 +153,3 @@ void ViewWidget::leaveEvent(QEvent* event)
         _steward.resetMouse();
     }
 }
-
-#include "viewwidget.moc"

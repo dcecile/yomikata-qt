@@ -174,5 +174,3 @@ void Scroller::enforceBounds()
         _velocity.setY(0.0);
     }
 }
-
-#include "scroller.moc"

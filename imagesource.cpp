@@ -12,7 +12,7 @@ ImageSource::ImageSource(QIODevice *proxy, int fullSize, QObject *parent)
 {
     _proxy = proxy;
     Q_ASSERT(_proxy->isReadable());
-    setOpenMode(ReadOnly);
+    setOpenMode(ReadOnly | Unbuffered);
     _buffer.setData(_proxy->readAll());
     _buffer.open(ReadOnly);
     _fullSize = static_cast<qint64>(fullSize);
@@ -42,8 +42,10 @@ void ImageSource::close()
 void ImageSource::proxyReadyRead()
 {
     QMutexLocker locker(&_lock);
-
-    _buffer.buffer() += _proxy->readAll();
+    if (isReadable())
+    {
+        _buffer.buffer() += _proxy->readAll();
+    }
     _ready.wakeOne();
 }
 
@@ -62,7 +64,7 @@ void ImageSource::updateFromProxy()
     if (problemWaiting && _buffer.size() < targetSize && isReadable())
     {
         QProcess *process = (QProcess *) _proxy;
-        debug()<<"Problem!"<<process->exitCode()<<process->error()<<process->state()<<process->isReadable();//<<process->readAllStandardError();
+        debug()<<"Problem!"<<process->exitCode()<<process->error()<<process->state()<<process->isReadable();
     }
 }
 
@@ -72,10 +74,19 @@ qint64 ImageSource::readData(char *data, qint64 maxSize)
     if (isReadable())
     {
         updateFromProxy();
+        if (isReadable())
+        {
+            return _buffer.read(data, maxSize);
+        }
+        else
+        {
+            return 0;
+        }
     }
-    int read = _buffer.read(data, maxSize);
-    //debug()<<"Reading"<<read<<QString("(%1 ms)").arg(_clock.elapsed())<<isOpen();
-    return read;
+    else
+    {
+        return -1;
+    }
 }
 
 bool ImageSource::seek(qint64 pos)
@@ -84,9 +95,16 @@ bool ImageSource::seek(qint64 pos)
 
     if (isReadable())
     {
-        QIODevice::seek(pos);
         updateFromProxy();
-        return _buffer.seek(pos);
+        if (isReadable())
+        {
+            QIODevice::seek(pos);
+            return _buffer.seek(pos);
+        }
+        else
+        {
+            return false;
+        }
     }
     else
     {
@@ -144,5 +162,3 @@ qint64 ImageSource::writeData(const char *data, qint64 maxSize)
     Q_ASSERT(false);
     return 0;
 }
-
-#include "imagesource.moc"

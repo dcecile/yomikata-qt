@@ -8,6 +8,5 @@
 
 #include <QDebug>
 #define debug() qDebug()
-#undef qDebug
 
 #endif

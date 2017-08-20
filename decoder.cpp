@@ -251,5 +251,3 @@ void Decoder::decode(
 
     setUpImageReader(pageFilename);
 }
-
-#include "decoder.moc"

@@ -281,5 +281,3 @@ void Strategist::setViewport(const QSize &fullSize, const QSize &viewSize)
     _viewport = fullSize;
     _visibleSize = viewSize;
 }
-
-#include "strategist.moc"

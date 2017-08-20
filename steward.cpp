@@ -252,5 +252,3 @@ void Steward::dualCausedPageChange()
     // Reload the current pages
     loadPages();
 }
-
-#include "steward.moc"

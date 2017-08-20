@@ -217,5 +217,3 @@ void StrategistTest::partialInfo()
     SET(1, 90, 100);
     FIT(1, 0, 3, 40, 44);
 }
-
-#include "strategisttest.moc"
